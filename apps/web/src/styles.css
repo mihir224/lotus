@@ -1,0 +1,92 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap");
+
+:root {
+  color: #1d2822;
+  background: #f4f1e8;
+  font-family: "DM Sans", sans-serif;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, textarea { font: inherit; }
+button { cursor: pointer; }
+
+.shell { min-height: 100vh; background: radial-gradient(circle at 50% -20%, #fffdf6 0, #f4f1e8 45%); }
+.topbar { height: 76px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #d8d4c7; background: rgba(250, 248, 241, .86); backdrop-filter: blur(14px); }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand > div:last-child { display: grid; }
+.brand strong { font: 700 18px "Manrope"; letter-spacing: -.03em; }
+.brand span { color: #7c817d; font-size: 12px; }
+.lotus-mark { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; color: #fff; background: #1f5b43; box-shadow: 0 8px 20px #1f5b4333; }
+.context { display: flex; align-items: center; gap: 9px; padding: 9px 13px; border: 1px solid #d8d4c7; border-radius: 14px; background: #fffaf1; font-size: 12px; }
+.context span { color: #8b8e89; }
+.context i { width: 1px; height: 20px; background: #d8d4c7; margin: 0 4px; }
+
+.workspace { min-height: calc(100vh - 76px); display: grid; grid-template-columns: 210px minmax(480px, 1fr) 360px; }
+.rail { padding: 28px 18px; border-right: 1px solid #d8d4c7; display: flex; flex-direction: column; gap: 5px; }
+.eyebrow { margin: 0 0 10px; color: #7f837e; font-size: 11px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+.mode { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-radius: 12px; padding: 10px; background: transparent; color: #626963; text-align: left; }
+.mode span { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 9px; background: #ebe8df; font-weight: 700; }
+.mode:hover, .mode.active { background: #fffaf1; color: #174f39; }
+.mode.active span { background: #d7e8dd; }
+.rail-note { margin-top: auto; display: flex; gap: 9px; align-items: center; border: 1px solid #d8d4c7; border-radius: 12px; padding: 12px; background: #f9f6ee; }
+.rail-note div { display: grid; gap: 2px; }
+.rail-note strong { font-size: 12px; }
+.rail-note small { color: #888c87; font-size: 10px; }
+.pulse { width: 8px; height: 8px; border-radius: 50%; background: #3d996e; box-shadow: 0 0 0 4px #3d996e20; }
+
+.conversation { padding: 52px clamp(28px, 5vw, 72px) 32px; display: flex; flex-direction: column; min-width: 0; }
+.intro { max-width: 720px; }
+.intro h1 { margin: 0; font: 600 clamp(34px, 4vw, 54px)/1.05 "Manrope"; letter-spacing: -.055em; color: #183329; }
+.intro > p:last-child { max-width: 630px; margin: 18px 0 0; color: #6a716c; font-size: 16px; line-height: 1.6; }
+.suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin: 28px 0; }
+.suggestions button { border: 1px solid #d5d1c5; border-radius: 999px; padding: 8px 12px; background: #fdfaf2; color: #556159; font-size: 12px; }
+.suggestions button:hover { border-color: #8eb29f; color: #174f39; }
+.answer-card { border: 1px solid #d8d4c7; border-radius: 18px; padding: 22px; background: rgba(255, 252, 244, .82); box-shadow: 0 12px 44px #2b3e3420; }
+.answer-head { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; color: #848983; font-size: 11px; }
+.route-chip { padding: 5px 8px; border-radius: 7px; background: #dcecdf; color: #225d44; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.answer-card h2, .drawer-head h2 { margin: 18px 0 9px; font: 600 18px "Manrope"; }
+.answer-card > p { margin: 0; color: #3f4943; line-height: 1.65; }
+.uncertainty { margin-top: 16px; border-left: 3px solid #d29e48; padding: 10px 12px; background: #fff7e7; color: #776342; font-size: 12px; }
+.uncertainty strong { margin-right: 8px; color: #695128; }
+.error { margin: 16px 0; padding: 12px; border-radius: 12px; background: #fff0ed; color: #9f3e32; }
+.composer { margin-top: auto; padding-top: 28px; }
+.composer textarea { width: 100%; resize: vertical; min-height: 96px; border: 1px solid #cfcbbf; outline: none; border-radius: 17px; padding: 16px; background: #fffdf7; color: #27312b; box-shadow: 0 8px 30px #3b463f15; }
+.composer textarea:focus { border-color: #5e9278; box-shadow: 0 0 0 3px #5e92781f; }
+.composer > div { display: flex; justify-content: space-between; align-items: center; padding: 9px 4px 0; color: #888d88; font-size: 12px; }
+.composer button { border: 0; border-radius: 11px; padding: 10px 16px; color: #fff; background: #1f5b43; font-weight: 700; box-shadow: 0 7px 18px #1f5b4330; }
+.composer button:disabled { opacity: .6; cursor: wait; }
+
+.evidence { border-left: 1px solid #d8d4c7; background: rgba(249, 247, 240, .7); padding: 28px 22px; overflow-y: auto; }
+.drawer-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.drawer-head h2 { margin-top: 0; }
+.drawer-head > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; background: #e5e2d8; color: #616761; font-size: 12px; font-weight: 700; }
+.empty { margin-top: 72px; color: #969994; text-align: center; font-size: 13px; line-height: 1.6; }
+.source { margin-bottom: 12px; border: 1px solid #d8d4c7; border-radius: 15px; padding: 15px; background: #fffdf8; }
+.source > div { display: flex; justify-content: space-between; align-items: center; }
+.source > div span { color: #296448; font-weight: 700; }
+.source small { color: #8b8f8a; text-transform: capitalize; }
+.source h3 { margin: 12px 0 7px; font: 600 14px "Manrope"; }
+.source p { margin: 0; color: #686e69; font-size: 12px; line-height: 1.55; }
+.source footer { display: flex; gap: 8px; margin-top: 12px; color: #888d88; font-size: 10px; }
+.source footer strong { color: #4d6257; text-transform: uppercase; }
+
+@media (max-width: 1050px) {
+  .workspace { grid-template-columns: 82px 1fr 320px; }
+  .rail { padding-inline: 12px; }
+  .rail .eyebrow, .mode { font-size: 0; }
+  .mode span { font-size: 12px; }
+  .rail-note { display: none; }
+}
+
+@media (max-width: 780px) {
+  .topbar { padding: 0 16px; }
+  .context { display: none; }
+  .workspace { display: block; }
+  .rail { padding: 10px 14px; border-right: 0; border-bottom: 1px solid #d8d4c7; flex-direction: row; overflow-x: auto; }
+  .rail .eyebrow { display: none; }
+  .mode { width: auto; font-size: 11px; white-space: nowrap; }
+  .conversation { padding: 32px 18px; }
+  .evidence { border-left: 0; border-top: 1px solid #d8d4c7; }
+}

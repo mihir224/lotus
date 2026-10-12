@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lotus.local/schemas/evidence-envelope.schema.json",
+  "title": "EvidenceEnvelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_id",
+    "source_system",
+    "source_type",
+    "snippet",
+    "retrieval_method",
+    "scope"
+  ],
+  "properties": {
+    "source_id": { "type": "string", "minLength": 1 },
+    "source_system": { "type": "string", "minLength": 1 },
+    "source_type": { "type": "string", "minLength": 1 },
+    "title": { "type": ["string", "null"] },
+    "uri": { "type": ["string", "null"], "format": "uri" },
+    "snippet": { "type": "string", "minLength": 1 },
+    "section": { "type": ["string", "null"] },
+    "updated_at": { "type": ["string", "null"], "format": "date-time" },
+    "retrieval_method": {
+      "type": "string",
+      "enum": ["semantic_index", "hybrid_index", "live_source", "demo_fixture"]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tenant_id"],
+      "properties": {
+        "tenant_id": { "type": "string", "minLength": 1 },
+        "project_id": { "type": ["string", "null"] },
+        "meeting_id": { "type": ["string", "null"] }
+      }
+    },
+    "score": { "type": ["number", "null"] },
+    "version": { "type": ["string", "null"] }
+  }
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "chunk_id": "adr-017-001",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "source_system": "confluence",
+    "source_type": "adr",
+    "source_id": "ADR-017",
+    "source_uri": "fixture://confluence/ADR-017",
+    "title": "Capped exponential backoff for checkout",
+    "section_path": "Decision",
+    "chunk_text": "Use capped exponential backoff with full jitter for retryable provider failures. Stop after three total attempts to bound latency and duplicate-payment risk.",
+    "acl_principals": ["group:demo"],
+    "source_version": "12",
+    "source_updated_at": "2026-09-18T10:15:00Z"
+  },
+  {
+    "chunk_id": "runbook-payments-001",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-PAYMENTS",
+    "source_uri": "fixture://confluence/RUNBOOK-PAYMENTS",
+    "title": "Payment provider failure runbook",
+    "section_path": "Retry exhaustion response",
+    "chunk_text": "When checkout retry exhaustion spikes, on-call should verify provider health, compare permanent and transient failure rates, and disable retries only through the approved feature flag procedure.",
+    "acl_principals": ["group:demo"],
+    "source_version": "8",
+    "source_updated_at": "2026-10-01T08:00:00Z"
+  },
+  {
+    "chunk_id": "private-adr-001",
+    "tenant_id": "other",
+    "project_id": "payments",
+    "source_system": "confluence",
+    "source_type": "adr",
+    "source_id": "ADR-PRIVATE",
+    "source_uri": "fixture://confluence/ADR-PRIVATE",
+    "title": "Private tenant checkout design",
+    "section_path": "Decision",
+    "chunk_text": "This protected checkout retries document must never appear for the demo tenant.",
+    "acl_principals": ["group:other"],
+    "source_version": "1",
+    "source_updated_at": "2026-10-01T08:00:00Z"
+  }
+]

@@ -1,0 +1,29 @@
+[project]
+name = "lotus-workspace"
+version = "0.1.0"
+description = "Unified enterprise AI workspace hackathon MVP"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["apps/api"]
+testpaths = ["tests/unit", "tests/integration"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

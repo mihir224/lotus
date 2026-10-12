@@ -1,0 +1,32 @@
+[
+  {
+    "chunk_id": "product-checkout-retries-001",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "source_system": "confluence",
+    "source_type": "product_doc",
+    "source_id": "PROD-CHECKOUT-RETRIES",
+    "source_uri": "fixture://confluence/PROD-CHECKOUT-RETRIES",
+    "title": "Checkout retry behavior",
+    "section_path": "Customer experience",
+    "chunk_text": "Checkout automatically retries transient payment failures up to three attempts. The cap prevents duplicate charges and keeps the customer wait bounded.",
+    "acl_principals": ["group:demo"],
+    "source_version": "3",
+    "source_updated_at": "2026-09-12T09:30:00Z"
+  },
+  {
+    "chunk_id": "product-release-001",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "source_system": "upload",
+    "source_type": "release_note",
+    "source_id": "REL-2026-09",
+    "source_uri": "fixture://releases/2026-09",
+    "title": "Payments September release",
+    "section_path": "Resilience",
+    "chunk_text": "The checkout client now reports retry exhaustion separately from permanent card declines so support can distinguish transient provider incidents.",
+    "acl_principals": ["group:demo"],
+    "source_version": "1",
+    "source_updated_at": "2026-09-30T12:00:00Z"
+  }
+]
