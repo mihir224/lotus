@@ -1,5 +1,3 @@
-export type Mode = "auto" | "ask_company" | "meeting" | "code" | "document" | "research";
-
 export type Evidence = {
   source_id: string;
   source_system: string;
@@ -30,4 +28,12 @@ export type GroundedAnswer = {
     reason: string;
     live_retrieval: boolean;
   };
+  agents_used: string[];
+  plan: {
+    steps: { agent: string; intent: string; depends_on: string[] }[];
+    reason: string;
+    date_from: string | null;
+    date_to: string | null;
+  } | null;
+  artifacts: { artifact_type: string; title: string; content: string | object }[];
 };

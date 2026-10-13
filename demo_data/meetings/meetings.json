@@ -1,0 +1,30 @@
+[
+  {
+    "meeting_id":"M-104","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-pay-104","title":"Checkout resilience review","project_id":"payments","team":"Payments","started_at":"2026-10-06T10:00:00+05:30","ended_at":"2026-10-06T10:30:00+05:30","participants":["Asha","Ravi","Mina"],"language_code":"en","recording_url":"fixture://recordings/M-104","segments":[
+      {"segment_id":"m104-s1","start_ms":0,"end_ms":28000,"speaker":"Asha","text":"We need to finalize the checkout retry policy. The current fixed delay causes synchronized retry spikes."},
+      {"segment_id":"m104-s2","start_ms":28000,"end_ms":61000,"speaker":"Ravi","text":"The architecture decision says full jitter with three total attempts. Platform is also building a shared retry library."},
+      {"segment_id":"m104-s3","start_ms":61000,"end_ms":92000,"speaker":"Mina","text":"Decision: Payments will use full jitter and keep the three attempt cap. Ravi will add the jitter tests."},
+      {"segment_id":"m104-s4","start_ms":92000,"end_ms":125000,"speaker":"Asha","text":"Open question: should we adopt the Platform library now or after the checkout release? We did not assign an owner for that investigation."}
+    ]},
+    "analysis":{"summary":"Payments agreed to add full jitter while retaining the three-attempt checkout cap.","decisions":[{"text":"Use full jitter and retain three total attempts.","timestamp_ms":61000,"evidence_segment_ids":["m104-s3"]}],"action_items":[{"text":"Add jitter tests.","owner":"Ravi","due_date":null,"timestamp_ms":61000},{"text":"Investigate adoption of the Platform retry library.","owner":null,"due_date":null,"timestamp_ms":92000}],"open_questions":["Adopt the Platform retry library now or after the checkout release?"],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-105","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-platform-105","title":"Platform retry SDK sync","project_id":"payments","team":"Platform","started_at":"2026-10-08T15:00:00+05:30","ended_at":"2026-10-08T15:25:00+05:30","participants":["Neha","Carlos"],"language_code":"en","recording_url":"fixture://recordings/M-105","segments":[
+      {"segment_id":"m105-s1","start_ms":0,"end_ms":35000,"speaker":"Neha","text":"The shared retry SDK will support exponential backoff, full jitter, metrics, and configurable maximum attempts."},
+      {"segment_id":"m105-s2","start_ms":35000,"end_ms":70000,"speaker":"Carlos","text":"Payments and Orders are doing similar work. We should provide a migration guide and compare their policies."},
+      {"segment_id":"m105-s3","start_ms":70000,"end_ms":105000,"speaker":"Neha","text":"Action item: draft the migration guide by October twentieth. Carlos owns it."}
+    ]},
+    "analysis":{"summary":"Platform reviewed a shared retry SDK intended to replace duplicated retry implementations.","decisions":[],"action_items":[{"text":"Draft the retry SDK migration guide.","owner":"Carlos","due_date":"2026-10-20","timestamp_ms":70000}],"open_questions":[],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-106","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-mobile-106","title":"Mobile payments reliability","project_id":"payments","team":"Mobile","started_at":"2026-10-10T11:00:00+05:30","ended_at":"2026-10-10T11:20:00+05:30","participants":["Vanshika","Arjun"],"language_code":"hi-en","recording_url":"fixture://recordings/M-106","segments":[
+      {"segment_id":"m106-s1","start_ms":0,"end_ms":32000,"speaker":"Vanshika","text":"Mobile payment queue mein network retry ke liye jitter add karna hai, but ambiguous acknowledgement ke baad payment retry nahi karenge."},
+      {"segment_id":"m106-s2","start_ms":32000,"end_ms":65000,"speaker":"Arjun","text":"We should align the metrics with the Payments runbook and ask Platform whether their shared SDK supports mobile clients."},
+      {"segment_id":"m106-s3","start_ms":65000,"end_ms":95000,"speaker":"Vanshika","text":"Open question: can the SDK run offline? Arjun will check, but we have no due date."}
+    ]},
+    "analysis":{"summary":"Mobile discussed safe jittered retries for offline payments and possible alignment with the Platform SDK.","decisions":[{"text":"Do not retry after an ambiguous provider acknowledgement.","timestamp_ms":0,"evidence_segment_ids":["m106-s1"]}],"action_items":[{"text":"Check whether the Platform SDK supports offline mobile clients.","owner":"Arjun","due_date":null,"timestamp_ms":65000}],"open_questions":["Can the shared SDK run offline?"],"anomalies":[]}
+  }
+]

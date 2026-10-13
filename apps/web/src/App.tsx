@@ -1,14 +1,5 @@
 import { FormEvent, useState } from "react";
-import type { GroundedAnswer, Mode } from "./types";
-
-const modes: { value: Mode; label: string }[] = [
-  { value: "auto", label: "Auto" },
-  { value: "ask_company", label: "Ask company" },
-  { value: "meeting", label: "Meeting" },
-  { value: "code", label: "Code" },
-  { value: "document", label: "Document" },
-  { value: "research", label: "Research" }
-];
+import type { GroundedAnswer } from "./types";
 
 const suggestions = [
   "Why are checkout retries capped, and what should on-call do?",
@@ -17,7 +8,6 @@ const suggestions = [
 ];
 
 export function App() {
-  const [mode, setMode] = useState<Mode>("auto");
   const [message, setMessage] = useState(suggestions[0]);
   const [answer, setAnswer] = useState<GroundedAnswer | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +26,7 @@ export function App() {
           "X-Lotus-Tenant": "demo",
           "X-Lotus-User": "demo-user"
         },
-        body: JSON.stringify({ message, project_id: "payments", mode })
+        body: JSON.stringify({ message, project_id: "payments" })
       });
       if (!response.ok) throw new Error(`Request failed with ${response.status}`);
       setAnswer((await response.json()) as GroundedAnswer);
@@ -67,17 +57,12 @@ export function App() {
       </header>
 
       <section className="workspace">
-        <aside className="rail" aria-label="Workspace modes">
-          <p className="eyebrow">Workspace</p>
-          {modes.map((item) => (
-            <button
-              className={mode === item.value ? "mode active" : "mode"}
-              key={item.value}
-              onClick={() => setMode(item.value)}
-              type="button"
-            >
-              <span>{item.label.slice(0, 1)}</span>{item.label}
-            </button>
+        <aside className="rail" aria-label="Agent workflow">
+          <p className="eyebrow">Agent workflow</p>
+          {["Planner", "Specialists", "Result"].map((item, index) => (
+            <div className="mode active" key={item}>
+              <span>{index + 1}</span>{item}
+            </div>
           ))}
           <div className="rail-note">
             <span className="pulse" />
@@ -102,8 +87,8 @@ export function App() {
             <article className="answer-card">
               <div className="answer-head">
                 <span className="route-chip">{answer.route.route}</span>
-                <span>{Math.round(answer.route.confidence * 100)}% route confidence</span>
-                <span>{answer.route.live_retrieval ? "Live source requested" : "Indexed retrieval"}</span>
+                <span>{answer.agents_used.join(" → ")}</span>
+                <span>{answer.route.live_retrieval ? "Live web retrieval" : "Indexed retrieval"}</span>
               </div>
               <h2>Answer</h2>
               <p>{answer.answer}</p>
@@ -123,7 +108,7 @@ export function App() {
               rows={3}
             />
             <div>
-              <span>Mode: {modes.find((item) => item.value === mode)?.label}</span>
+              <span>Planner selects the right agents automatically</span>
               <button type="submit" disabled={loading}>{loading ? "Checking sources…" : "Ask Lotus"}</button>
             </div>
           </form>

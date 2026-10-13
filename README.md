@@ -1,20 +1,23 @@
 # Lotus
 
 Lotus is a unified enterprise AI workspace for trusted knowledge retrieval,
-meeting intelligence, bounded background code changes, document analysis, and
-grounded web research.
+meeting intelligence, document analysis, and grounded web research.
 
 This repository starts from the hackathon PRD in:
 
 `/Users/mihir.saini/Documents/Codex/2026-10-13/referenced-chatgpt-conversation-this-is-an/outputs/unified-enterprise-ai-workspace-prd.md`
 
-## Intended stack
+## Implemented stack
 
 - React + Vite + TypeScript for the web workspace
 - Python + FastAPI for the API and worker boundaries
-- Google ADK and Gemini on Vertex AI for orchestration and model calls
-- BigQuery, Firestore, Cloud Storage, and Cloud Tasks for managed data and jobs
-- Read-only Jira and Confluence access through narrow MCP adapters
+- Google ADK 2.12 and Gemini on Vertex AI for live orchestration and model calls
+- PostgreSQL 17 with pgvector for document and timestamped transcript retrieval
+- Deterministic fixture adapters for Jira, Confluence, SharePoint, GitHub, calendar, and web
+
+There is no user-selected chat mode. The Planner Agent selects Data, Meeting, and
+Web specialists, optionally runs Anomaly after meeting evidence, and always runs
+the Result Agent last. Fixture mode uses the same contracts without cloud credentials.
 
 ## Repository layout
 
@@ -36,11 +39,15 @@ Reference repositories are used for ideas only; Lotus code is written from scrat
 
 ## Run locally
 
-Requires Python 3.12+, `uv`, and Node.js 20+.
+Requires Python 3.12+, `uv`, Node.js 20+, and Docker for the pgvector path.
 
 ```bash
 uv sync
 npm install --prefix apps/web
+cp .env.example .env
+make db-up
+make migrate
+make seed
 make api
 ```
 
@@ -52,6 +59,13 @@ make web-dev
 
 Open `http://127.0.0.1:5173`. The fixture-backed API runs at
 `http://127.0.0.1:8000` and requires no cloud credentials.
+
+For a zero-infrastructure fixture run, set `STORE_BACKEND=memory`. For live Gemini,
+set `RUNTIME_MODE=vertex`, configure Vertex credentials/project, and re-seed so
+stored vectors and query vectors share the same embedding model.
+
+The calendar/meeting integration contract is documented in
+[docs/meeting-api-contract.md](docs/meeting-api-contract.md).
 
 ## Verify
 

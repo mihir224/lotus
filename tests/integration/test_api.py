@@ -7,7 +7,7 @@ client = TestClient(app)
 def test_ready_is_fixture_backed() -> None:
     response = client.get("/v1/readyz")
     assert response.status_code == 200
-    assert response.json()["mode"] == "fixture"
+    assert response.json()["runtime"] == "fixture"
 
 
 def test_grounded_answer_contains_scope_and_evidence() -> None:
@@ -24,6 +24,33 @@ def test_grounded_answer_contains_scope_and_evidence() -> None:
     assert body["route"]["route"] == "knowledge"
     assert body["scope"]["tenant_id"] == "demo"
     assert len(body["evidence"]) >= 2
+    assert body["agents_used"] == ["data", "result"]
+
+
+def test_meeting_search_returns_timestamped_transcript_link() -> None:
+    response = client.post(
+        "/v1/chat/messages",
+        json={
+            "message": "Which meeting discussed retry jitter last week?",
+            "project_id": "payments",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agents_used"] == ["meeting", "result"]
+    assert any(
+        row["meeting_id"] == "M-104" and row["start_ms"] is not None
+        for row in body["evidence"]
+    )
+
+
+def test_meeting_endpoints_return_transcript_and_analysis() -> None:
+    listing = client.get("/v1/meetings?project_id=payments")
+    assert listing.status_code == 200
+    assert len(listing.json()) == 3
+    detail = client.get("/v1/meetings/M-104")
+    assert detail.status_code == 200
+    assert detail.json()["analysis"]["decisions"]
 
 
 def test_no_answer_abstains() -> None:

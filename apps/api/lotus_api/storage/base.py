@@ -1,0 +1,51 @@
+from collections.abc import Sequence
+from datetime import datetime
+from typing import Protocol
+
+from ..models import AuthContext, Evidence, MeetingListItem, MeetingRecord, MeetingTranscriptInput
+
+
+class KnowledgeStore(Protocol):
+    def ready(self) -> bool: ...
+
+    def seed(self) -> dict[str, int]: ...
+
+    def search_documents(
+        self,
+        query: str,
+        auth: AuthContext,
+        project_id: str,
+        top_k: int = 8,
+        source_types: Sequence[str] = (),
+    ) -> list[Evidence]: ...
+
+    def search_transcripts(
+        self,
+        query: str,
+        auth: AuthContext,
+        project_id: str,
+        top_k: int = 8,
+        meeting_id: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[Evidence]: ...
+
+    def upsert_meeting(
+        self,
+        meeting_id: str,
+        auth: AuthContext,
+        transcript: MeetingTranscriptInput,
+    ) -> MeetingRecord: ...
+
+    def get_meeting(self, meeting_id: str, auth: AuthContext) -> MeetingRecord | None: ...
+
+    def save_meeting(self, record: MeetingRecord, auth: AuthContext) -> MeetingRecord: ...
+
+    def list_meetings(
+        self,
+        auth: AuthContext,
+        project_id: str | None = None,
+        team: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[MeetingListItem]: ...

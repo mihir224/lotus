@@ -4,9 +4,15 @@ version = "0.1.0"
 description = "Unified enterprise AI workspace hackathon MVP"
 requires-python = ">=3.12"
 dependencies = [
+  "alembic>=1.20,<2",
   "fastapi>=0.115,<1",
+  "google-adk>=2.12,<2.13",
+  "google-genai>=2.30,<2.31",
+  "pgvector>=0.5,<0.6",
+  "psycopg[binary,pool]>=3.3,<4",
   "pydantic>=2.10,<3",
   "pydantic-settings>=2.7,<3",
+  "sqlalchemy>=2.1,<2.2",
   "uvicorn[standard]>=0.34,<1",
 ]
 

@@ -1,4 +1,6 @@
+from datetime import datetime
 from enum import StrEnum
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -15,13 +17,12 @@ class Route(StrEnum):
     RESEARCH = "research"
 
 
-class Mode(StrEnum):
-    AUTO = "auto"
-    ASK_COMPANY = "ask_company"
+class AgentName(StrEnum):
+    DATA = "data"
     MEETING = "meeting"
-    CODE = "code"
-    DOCUMENT = "document"
-    RESEARCH = "research"
+    WEB = "web"
+    ANOMALY = "anomaly"
+    RESULT = "result"
 
 
 class AuthContext(StrictModel):
@@ -33,7 +34,6 @@ class AuthContext(StrictModel):
 class ChatRequest(StrictModel):
     message: str = Field(min_length=1, max_length=8_000)
     project_id: str = Field(min_length=1, max_length=128)
-    mode: Mode = Mode.AUTO
     meeting_id: str | None = None
     repository_id: str | None = None
 
@@ -58,6 +58,9 @@ class Evidence(StrictModel):
     scope: Scope
     score: float | None = None
     version: str | None = None
+    meeting_id: str | None = None
+    start_ms: int | None = None
+    end_ms: int | None = None
 
 
 class RouteDecision(StrictModel):
@@ -67,6 +70,32 @@ class RouteDecision(StrictModel):
     live_retrieval: bool = False
 
 
+class PlanStep(StrictModel):
+    agent: AgentName
+    intent: str
+    depends_on: list[AgentName] = Field(default_factory=list)
+
+
+class ExecutionPlan(StrictModel):
+    steps: list[PlanStep]
+    reason: str
+    date_from: datetime | None = None
+    date_to: datetime | None = None
+
+
+class Artifact(StrictModel):
+    artifact_type: Literal["mermaid", "meeting_analysis"]
+    title: str
+    content: str | dict[str, Any]
+
+
+class SpecialistResult(StrictModel):
+    agent: AgentName
+    evidence: list[Evidence] = Field(default_factory=list)
+    artifacts: list[Artifact] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
 class GroundedAnswer(StrictModel):
     answer: str
     evidence: list[Evidence]
@@ -74,3 +103,81 @@ class GroundedAnswer(StrictModel):
     uncertainty: list[str] = Field(default_factory=list)
     next_action: str | None = None
     route: RouteDecision
+    agents_used: list[AgentName] = Field(default_factory=list)
+    plan: ExecutionPlan | None = None
+    artifacts: list[Artifact] = Field(default_factory=list)
+
+
+class TranscriptSegment(StrictModel):
+    segment_id: str
+    start_ms: int = Field(ge=0)
+    end_ms: int = Field(ge=0)
+    speaker: str
+    text: str = Field(min_length=1)
+
+
+class MeetingTranscriptInput(StrictModel):
+    calendar_event_id: str
+    title: str
+    project_id: str
+    team: str
+    started_at: datetime
+    ended_at: datetime
+    participants: list[str]
+    language_code: str = "en"
+    recording_url: str | None = None
+    segments: list[TranscriptSegment] = Field(min_length=1)
+
+
+class Decision(StrictModel):
+    text: str
+    timestamp_ms: int | None = None
+    evidence_segment_ids: list[str] = Field(default_factory=list)
+
+
+class ActionItem(StrictModel):
+    text: str
+    owner: str | None = None
+    due_date: str | None = None
+    timestamp_ms: int | None = None
+
+
+class Anomaly(StrictModel):
+    anomaly_type: Literal[
+        "unowned_action",
+        "missing_due_date",
+        "unresolved_question",
+        "document_conflict",
+    ]
+    severity: Literal["low", "medium", "high"]
+    description: str
+    evidence_segment_ids: list[str] = Field(default_factory=list)
+
+
+class MeetingAnalysis(StrictModel):
+    summary: str
+    decisions: list[Decision] = Field(default_factory=list)
+    action_items: list[ActionItem] = Field(default_factory=list)
+    open_questions: list[str] = Field(default_factory=list)
+    anomalies: list[Anomaly] = Field(default_factory=list)
+
+
+class MeetingRecord(StrictModel):
+    meeting_id: str
+    tenant_id: str
+    transcript: MeetingTranscriptInput
+    analysis: MeetingAnalysis | None = None
+    status: Literal["received", "processed", "failed"] = "received"
+    updated_at: datetime
+
+
+class MeetingListItem(StrictModel):
+    meeting_id: str
+    calendar_event_id: str
+    title: str
+    project_id: str
+    team: str
+    started_at: datetime
+    ended_at: datetime
+    language_code: str
+    status: str
