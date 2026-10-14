@@ -23,7 +23,11 @@ def list_calendar_events(
     for raw in load_fixture("calendar/events.json"):
         if not _allowed(raw, auth):
             continue
-        payload = {key: value for key, value in raw.items() if key not in {"tenant_id", "acl_principals"}}
+        payload = {
+            key: value
+            for key, value in raw.items()
+            if key not in {"tenant_id", "acl_principals"}
+        }
         item = CalendarEventItem.model_validate(payload)
         if project_id and item.project_id != project_id:
             continue

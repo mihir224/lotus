@@ -2,15 +2,15 @@ import os
 
 import pytest
 from lotus_api.config import Settings
-from lotus_api.embeddings import VertexEmbedder
+from lotus_api.embeddings import AgentPlatformEmbedder
 
 
 @pytest.mark.skipif(
     not os.getenv("GOOGLE_CLOUD_PROJECT"),
-    reason="GOOGLE_CLOUD_PROJECT and Vertex credentials are required for live embeddings",
+    reason="GOOGLE_CLOUD_PROJECT and ADC are required for live Agent Platform embeddings",
 )
 def test_live_multilingual_embedding_dimensions() -> None:
-    embedder = VertexEmbedder(Settings(runtime_mode="vertex"))
+    embedder = AgentPlatformEmbedder(Settings(runtime_mode="agent_platform"))
     vectors = embedder.embed_documents(
         ["checkout retry policy", "चेकआउट पुनः प्रयास नीति"]
     )

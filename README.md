@@ -11,7 +11,7 @@ This repository starts from the hackathon PRD in:
 
 - React + Vite + TypeScript for the web workspace
 - Python + FastAPI for the API and worker boundaries
-- Google ADK 2.12 and Gemini on Vertex AI for live orchestration and model calls
+- Google ADK 2.12 and Gemini Enterprise Agent Platform for live orchestration
 - PostgreSQL 17 with pgvector for document and timestamped transcript retrieval
 - Deterministic fixture adapters for Jira, Confluence, SharePoint, GitHub, calendar, and web
 
@@ -61,11 +61,17 @@ Open `http://127.0.0.1:5173`. The fixture-backed API runs at
 `http://127.0.0.1:8000` and requires no cloud credentials.
 
 For a zero-infrastructure fixture run, set `STORE_BACKEND=memory`. For live Gemini,
-set `RUNTIME_MODE=vertex`, configure Vertex credentials/project, and re-seed so
-stored vectors and query vectors share the same embedding model.
+set `RUNTIME_MODE=agent_platform`, configure the project and Application Default
+Credentials, and re-seed so stored vectors and query vectors share the same
+embedding model. The live defaults use the Agent Platform `global` endpoint,
+`gemini-3.7-flash`, and 768-dimensional `gemini-embedding-001` vectors.
 
 The calendar/meeting integration contract is documented in
 [docs/meeting-api-contract.md](docs/meeting-api-contract.md).
+Google Sign-In setup and Cloud Run abuse guardrails are documented in
+[docs/google-auth-and-cloud-run.md](docs/google-auth-and-cloud-run.md).
+AI agents working in this repository should start with
+[docs/context.md](docs/context.md) and load the relevant backend, frontend, or deployment context.
 
 ## Verify
 

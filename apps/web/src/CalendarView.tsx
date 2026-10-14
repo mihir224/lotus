@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { fetchCalendarEvents, fetchMeetingRecord, resolveRecordingUrl } from "./calendarApi";
-import type { CalendarEvent, MeetingAnalysis } from "./types";
+import {
+  fetchCalendarEvents,
+  fetchMeetingRecord,
+  resolveRecordingUrl,
+  summarizeMeeting
+} from "./calendarApi";
+import type { CalendarEvent, MeetingAnalysis, MeetingRecord } from "./types";
 
 const GRID_START_HOUR = 0;
 const GRID_END_HOUR = 23;
@@ -137,6 +142,60 @@ type CalendarViewProps = {
   today: Date;
 };
 
+function formatTranscriptTime(milliseconds: number) {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function MeetingSummary({ record }: { record: MeetingRecord }) {
+  const analysis = record.analysis;
+  if (!analysis) return <p className="calendar-summary-lead">No summary is available.</p>;
+  return (
+    <>
+      <p className="calendar-summary-lead">{analysis.summary}</p>
+      {analysis.decisions.length > 0 && (
+        <section>
+          <h3>Decisions</h3>
+          <ul>{analysis.decisions.map((item) => <li key={item.text}>{item.text}</li>)}</ul>
+        </section>
+      )}
+      {analysis.action_items.length > 0 && (
+        <section>
+          <h3>Action items</h3>
+          <ul>
+            {analysis.action_items.map((item) => (
+              <li key={item.text}>
+                {item.text}
+                {item.owner && <small> — {item.owner}</small>}
+                {item.due_date && <small> (due {item.due_date})</small>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {analysis.open_questions.length > 0 && (
+        <section>
+          <h3>Open questions</h3>
+          <ul>{analysis.open_questions.map((item) => <li key={item}>{item}</li>)}</ul>
+        </section>
+      )}
+      <details className="calendar-transcript">
+        <summary>View transcript · {record.transcript.segments.length} segments</summary>
+        <ol>
+          {record.transcript.segments.map((segment) => (
+            <li key={segment.segment_id}>
+              <time>{formatTranscriptTime(segment.start_ms)}</time>
+              <div><strong>{segment.speaker}</strong><p>{segment.text}</p></div>
+            </li>
+          ))}
+        </ol>
+      </details>
+    </>
+  );
+}
+
 export function CalendarView({ today }: CalendarViewProps) {
   const gridScrollRef = useRef<HTMLDivElement>(null);
   const [weekStart, setWeekStart] = useState(() => startOfWorkWeek(today));
@@ -149,6 +208,23 @@ export function CalendarView({ today }: CalendarViewProps) {
   const [recordingAnalysis, setRecordingAnalysis] = useState<MeetingAnalysis | null>(null);
   const [recordingSrc, setRecordingSrc] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryRecord, setSummaryRecord] = useState<MeetingRecord | null>(null);
+  const [summarizingId, setSummarizingId] = useState<string | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  async function openSummary(event: CalendarEvent) {
+    setSummarizingId(event.meeting_id);
+    setSummaryError(null);
+    try {
+      const record = await summarizeMeeting(event.meeting_id);
+      setSummaryRecord(record);
+      setSelected(null);
+    } catch (reason) {
+      setSummaryError(reason instanceof Error ? reason.message : "Unable to summarize meeting");
+    } finally {
+      setSummarizingId(null);
+    }
+  }
 
   useEffect(() => {
     if (!recordingEvent) {
@@ -443,6 +519,7 @@ export function CalendarView({ today }: CalendarViewProps) {
                 <p>{selected.description}</p>
               </li>
             </ul>
+            {summaryError && <p className="calendar-action-error" role="alert">{summaryError}</p>}
             <footer className="calendar-meeting-footer">
               <button
                 type="button"
@@ -454,7 +531,45 @@ export function CalendarView({ today }: CalendarViewProps) {
               >
                 View recording
               </button>
+              <button
+                type="button"
+                className="calendar-btn calendar-ai-btn"
+                disabled={summarizingId === selected.meeting_id}
+                onClick={() => void openSummary(selected)}
+              >
+                <span aria-hidden="true">✦</span>
+                {summarizingId === selected.meeting_id ? "Summarizing…" : "Summarize"}
+              </button>
             </footer>
+          </article>
+        </div>
+      )}
+
+      {summaryRecord && (
+        <div className="calendar-overlay" role="presentation" onClick={() => setSummaryRecord(null)}>
+          <article
+            className="calendar-summary-modal"
+            role="dialog"
+            aria-labelledby="summary-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <p className="eyebrow">AI meeting summary</p>
+                <h2 id="summary-title">{summaryRecord.transcript.title}</h2>
+              </div>
+              <button
+                type="button"
+                className="calendar-icon-btn"
+                aria-label="Close summary"
+                onClick={() => setSummaryRecord(null)}
+              >
+                ×
+              </button>
+            </header>
+            <div className="calendar-summary-body">
+              <MeetingSummary record={summaryRecord} />
+            </div>
           </article>
         </div>
       )}

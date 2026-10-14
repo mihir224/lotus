@@ -50,27 +50,37 @@ class DeterministicEmbedder:
         return self._embed(text)
 
 
-class VertexEmbedder:
+class AgentPlatformEmbedder:
     def __init__(self, settings: Settings):
         self.client = genai.Client(
-            vertexai=True,
+            enterprise=True,
             project=settings.google_cloud_project,
-            location=settings.google_cloud_location,
+            location=settings.embedding_location,
         )
         self.model = settings.embedding_model
         self.dimensions = settings.embedding_dimensions
-        self.model_id = f"vertex:{self.model}:{self.dimensions}"
+        self.model_id = f"agent-platform:{self.model}:{self.dimensions}"
 
     def _embed(self, texts: Sequence[str], task_type: str) -> list[list[float]]:
-        response = self.client.models.embed_content(
-            model=self.model,
-            contents=list(texts),
-            config=EmbedContentConfig(
-                task_type=task_type,
-                output_dimensionality=self.dimensions,
-            ),
-        )
-        return [list(item.values or []) for item in response.embeddings or []]
+        vectors: list[list[float]] = []
+        # Agent Platform currently accepts one gemini-embedding-001 input per request.
+        for text in texts:
+            response = self.client.models.embed_content(
+                model=self.model,
+                contents=text,
+                config=EmbedContentConfig(
+                    task_type=task_type,
+                    output_dimensionality=self.dimensions,
+                ),
+            )
+            embeddings = response.embeddings or []
+            if len(embeddings) != 1:
+                raise RuntimeError("Agent Platform returned an unexpected embedding count")
+            vector = list(embeddings[0].values or [])
+            if len(vector) != self.dimensions:
+                raise RuntimeError("Agent Platform returned an unexpected embedding dimension")
+            vectors.append(vector)
+        return vectors
 
     def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
         return self._embed(texts, "RETRIEVAL_DOCUMENT")
@@ -80,6 +90,10 @@ class VertexEmbedder:
 
 
 def build_embedder(settings: Settings) -> Embedder:
-    if settings.runtime_mode == "vertex":
-        return VertexEmbedder(settings)
+    if settings.runtime_mode in {"agent_platform", "vertex"}:
+        return AgentPlatformEmbedder(settings)
     return DeterministicEmbedder(settings.embedding_dimensions)
+
+
+# Keep the original public name for downstream imports while migrating configuration.
+VertexEmbedder = AgentPlatformEmbedder

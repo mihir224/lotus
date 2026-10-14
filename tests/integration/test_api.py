@@ -8,6 +8,7 @@ def test_ready_is_fixture_backed() -> None:
     response = client.get("/v1/readyz")
     assert response.status_code == 200
     assert response.json()["runtime"] == "fixture"
+    assert len(response.headers["X-Request-ID"]) == 12
 
 
 def test_grounded_answer_contains_scope_and_evidence() -> None:
@@ -53,6 +54,22 @@ def test_meeting_endpoints_return_transcript_and_analysis() -> None:
     detail = client.get("/v1/meetings/M-104")
     assert detail.status_code == 200
     assert detail.json()["analysis"]["decisions"]
+
+
+def test_calendar_meeting_can_be_summarized_idempotently() -> None:
+    first = client.post("/v1/meetings/M-107/summarize")
+    second = client.post("/v1/meetings/M-107/summarize")
+    assert first.status_code == second.status_code == 200
+    assert first.json()["analysis"] == second.json()["analysis"]
+    assert first.json()["transcript"]["segments"][0]["segment_id"] == "m107-s1"
+
+
+def test_summarize_requires_an_authorized_transcript() -> None:
+    response = client.post(
+        "/v1/meetings/M-107/summarize",
+        headers={"X-Lotus-Tenant": "other", "X-Lotus-User": "outsider"},
+    )
+    assert response.status_code == 404
 
 
 def test_calendar_events_fixture_week() -> None:

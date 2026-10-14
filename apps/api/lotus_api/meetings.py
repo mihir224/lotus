@@ -19,3 +19,15 @@ def process_meeting(
     record.status = "processed"
     record.updated_at = datetime.now(UTC)
     return store.save_meeting(record, auth)
+
+
+def summarize_meeting(
+    store: KnowledgeStore,
+    meeting_id: str,
+    auth: AuthContext,
+) -> MeetingRecord | None:
+    """Idempotently analyze the transcript already linked to a calendar event."""
+    record = store.get_meeting(meeting_id, auth)
+    if record is None:
+        return None
+    return process_meeting(store, meeting_id, auth, record.transcript)

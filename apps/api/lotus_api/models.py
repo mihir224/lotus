@@ -29,6 +29,19 @@ class AuthContext(StrictModel):
     tenant_id: str
     user_id: str
     principals: tuple[str, ...]
+    email: str | None = None
+    name: str | None = None
+
+
+class AuthConfig(StrictModel):
+    mode: Literal["dev", "google"]
+    google_client_id: str | None = None
+
+
+class AuthenticatedUser(StrictModel):
+    user_id: str
+    email: str | None = None
+    name: str | None = None
 
 
 class ChatRequest(StrictModel):

@@ -1,4 +1,12 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import {
+  authHeaders,
+  type AuthConfig,
+  type AuthSession,
+  GoogleLogin,
+  signOut,
+  storedAuthSession
+} from "./auth";
 import { CalendarView } from "./CalendarView";
 import type { GroundedAnswer } from "./types";
 
@@ -18,11 +26,38 @@ const suggestions = [
 ];
 
 export function App() {
+  const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(storedAuthSession);
+  const [authConfigError, setAuthConfigError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("planner");
   const [message, setMessage] = useState(suggestions[0]);
   const [answer, setAnswer] = useState<GroundedAnswer | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/v1/auth/config")
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Authentication config failed with ${response.status}`);
+        setAuthConfig((await response.json()) as AuthConfig);
+      })
+      .catch((reason) => {
+        setAuthConfigError(reason instanceof Error ? reason.message : "Unable to load authentication");
+      });
+  }, []);
+
+  if (authConfigError) {
+    return <main className="login-shell"><div className="error">{authConfigError}</div></main>;
+  }
+  if (!authConfig) {
+    return <main className="login-shell"><p>Loading Lotus…</p></main>;
+  }
+  if (authConfig.mode === "google" && !session) {
+    if (!authConfig.google_client_id) {
+      return <main className="login-shell"><div className="error">Google OAuth is not configured.</div></main>;
+    }
+    return <GoogleLogin clientId={authConfig.google_client_id} onAuthenticated={setSession} />;
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -32,11 +67,7 @@ export function App() {
     try {
       const response = await fetch("/v1/chat/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Lotus-Tenant": "demo",
-          "X-Lotus-User": "demo-user"
-        },
+        headers: authHeaders(true),
         body: JSON.stringify({ message, project_id: "payments" })
       });
       if (!response.ok) throw new Error(`Request failed with ${response.status}`);
@@ -64,6 +95,22 @@ export function App() {
           <i />
           <span>Environment</span>
           <strong>Fixture demo</strong>
+          {session && (
+            <>
+              <i />
+              <strong>{session.name ?? session.email}</strong>
+              <button
+                type="button"
+                className="signout-btn"
+                onClick={() => {
+                  signOut();
+                  setSession(null);
+                }}
+              >
+                Sign out
+              </button>
+            </>
+          )}
         </div>
       </header>
 

@@ -38,6 +38,15 @@ export type MeetingRecord = {
   transcript: {
     recording_url: string | null;
     title: string;
+    participants: string[];
+    language_code: string;
+    segments: {
+      segment_id: string;
+      start_ms: number;
+      end_ms: number;
+      speaker: string;
+      text: string;
+    }[];
   };
   analysis: MeetingAnalysis | null;
 };
