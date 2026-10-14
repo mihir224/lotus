@@ -47,10 +47,28 @@ def test_meeting_search_returns_timestamped_transcript_link() -> None:
 def test_meeting_endpoints_return_transcript_and_analysis() -> None:
     listing = client.get("/v1/meetings?project_id=payments")
     assert listing.status_code == 200
-    assert len(listing.json()) == 3
+    meeting_ids = {row["meeting_id"] for row in listing.json()}
+    assert "M-104" in meeting_ids
+    assert len(meeting_ids) >= 3
     detail = client.get("/v1/meetings/M-104")
     assert detail.status_code == 200
     assert detail.json()["analysis"]["decisions"]
+
+
+def test_calendar_events_fixture_week() -> None:
+    response = client.get(
+        "/v1/calendar/events",
+        params={
+            "project_id": "payments",
+            "date_from": "2026-10-12T00:00:00+05:30",
+            "date_to": "2026-10-17T00:00:00+05:30",
+        },
+    )
+    assert response.status_code == 200
+    events = response.json()
+    assert len(events) == 10
+    assert events[0]["meeting_id"] == "M-107"
+    assert all(row["event_id"].startswith("cal-") for row in events)
 
 
 def test_no_answer_abstains() -> None:

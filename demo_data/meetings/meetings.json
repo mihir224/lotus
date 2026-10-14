@@ -26,5 +26,55 @@
       {"segment_id":"m106-s3","start_ms":65000,"end_ms":95000,"speaker":"Vanshika","text":"Open question: can the SDK run offline? Arjun will check, but we have no due date."}
     ]},
     "analysis":{"summary":"Mobile discussed safe jittered retries for offline payments and possible alignment with the Platform SDK.","decisions":[{"text":"Do not retry after an ambiguous provider acknowledgement.","timestamp_ms":0,"evidence_segment_ids":["m106-s1"]}],"action_items":[{"text":"Check whether the Platform SDK supports offline mobile clients.","owner":"Arjun","due_date":null,"timestamp_ms":65000}],"open_questions":["Can the shared SDK run offline?"],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-107","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-107","title":"Quarterly roadmap alignment","project_id":"payments","team":"Payments","started_at":"2026-10-12T09:00:00+05:30","ended_at":"2026-10-12T10:00:00+05:30","participants":["Jordan Lee"],"language_code":"en","recording_url":"fixture://recordings/M-107","segments":[{"segment_id":"m107-s1","start_ms":0,"end_ms":30000,"speaker":"Jordan Lee","text":"Reviewed Q4 delivery milestones and cross-team dependencies for checkout resilience."}]},
+    "analysis":{"summary":"Teams aligned on Q4 themes: checkout resilience, shared observability, and staged rollouts.","decisions":[{"text":"Defer net-new features until retry policy ships in payments.","timestamp_ms":0,"evidence_segment_ids":["m107-s1"]}],"action_items":[{"text":"Publish dependency map for platform SDK adoption.","owner":"Jordan Lee","due_date":"2026-10-18","timestamp_ms":0}],"open_questions":["Which squads need dedicated capacity for holiday readiness?"],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-108","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-108","title":"Design critique — checkout flow","project_id":"payments","team":"Payments","started_at":"2026-10-12T11:30:00+05:30","ended_at":"2026-10-12T12:15:00+05:30","participants":["Morgan Patel"],"language_code":"en","recording_url":"fixture://recordings/M-108","segments":[{"segment_id":"m108-s1","start_ms":0,"end_ms":30000,"speaker":"Morgan Patel","text":"Reviewed checkout error states and agreed on progressive disclosure for retry messaging."}]},
+    "analysis":{"summary":"Design reviewed checkout error states; engineering can proceed after two copy tweaks.","decisions":[{"text":"Keep progressive disclosure for retry messaging on mobile.","timestamp_ms":0,"evidence_segment_ids":["m108-s1"]}],"action_items":[{"text":"Update Figma flows with finalized error copy.","owner":"Morgan Patel","due_date":"2026-10-15","timestamp_ms":0}],"open_questions":[],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-109","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-109","title":"Incident retrospective","project_id":"payments","team":"Payments","started_at":"2026-10-13T10:00:00+05:30","ended_at":"2026-10-13T11:00:00+05:30","participants":["Alex Rivera"],"language_code":"en","recording_url":"fixture://recordings/M-109","segments":[{"segment_id":"m109-s1","start_ms":0,"end_ms":30000,"speaker":"Alex Rivera","text":"Blameless review of the payment gateway timeout and pool saturation mitigation."}]},
+    "analysis":{"summary":"Timeout traced to connection pool saturation; mitigation and monitoring gaps were identified.","decisions":[{"text":"Raise pool limits in sandbox before repeating load tests.","timestamp_ms":0,"evidence_segment_ids":["m109-s1"]}],"action_items":[{"text":"Add saturation alert to payments on-call runbook.","owner":"Alex Rivera","due_date":null,"timestamp_ms":0}],"open_questions":["Should we cap concurrent checkout retries during recovery?"],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-110","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-110","title":"Partner integration standup","project_id":"payments","team":"Payments","started_at":"2026-10-13T14:00:00+05:30","ended_at":"2026-10-13T14:30:00+05:30","participants":["Casey Nguyen"],"language_code":"en","recording_url":"fixture://recordings/M-110","segments":[{"segment_id":"m110-s1","start_ms":0,"end_ms":30000,"speaker":"Casey Nguyen","text":"Sandbox validation is green; idempotency header rollout remains on track."}]},
+    "analysis":{"summary":"Partner sandbox validates happy path; idempotency header rollout remains on track.","decisions":[],"action_items":[{"text":"Share contract diff with partner solutions team.","owner":"Casey Nguyen","due_date":"2026-10-14","timestamp_ms":0}],"open_questions":["When can partners test partial refund webhooks?"],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-111","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-111","title":"Security review — auth service","project_id":"payments","team":"Platform","started_at":"2026-10-14T09:30:00+05:30","ended_at":"2026-10-14T10:45:00+05:30","participants":["Taylor Brooks"],"language_code":"en","recording_url":"fixture://recordings/M-111","segments":[{"segment_id":"m111-s1","start_ms":0,"end_ms":30000,"speaker":"Taylor Brooks","text":"Threat modeling for token refresh and session revocation completed."}]},
+    "analysis":{"summary":"Auth refresh flow reviewed; short-lived tokens accepted with stricter rotation logging.","decisions":[{"text":"Require rotation audit events for all refresh grants.","timestamp_ms":0,"evidence_segment_ids":["m111-s1"]}],"action_items":[{"text":"Document threat scenarios in security wiki.","owner":"Taylor Brooks","due_date":"2026-10-20","timestamp_ms":0}],"open_questions":[],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-112","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-112","title":"Customer advisory board prep","project_id":"payments","team":"Payments","started_at":"2026-10-14T13:00:00+05:30","ended_at":"2026-10-14T14:00:00+05:30","participants":["Riley Chen"],"language_code":"en","recording_url":"fixture://recordings/M-112","segments":[{"segment_id":"m112-s1","start_ms":0,"end_ms":30000,"speaker":"Riley Chen","text":"Finalized demo narrative around grounded answers and visible evidence."}]},
+    "analysis":{"summary":"Demo storyline centers on grounded answers with visible evidence and meeting recall.","decisions":[{"text":"Lead with payments project fixture in the live demo.","timestamp_ms":0,"evidence_segment_ids":["m112-s1"]}],"action_items":[{"text":"Record backup demo clip for advisory session.","owner":"Riley Chen","due_date":"2026-10-17","timestamp_ms":0}],"open_questions":["Do we show calendar recording flow in the first session?"],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-113","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-113","title":"Platform capacity planning","project_id":"payments","team":"Platform","started_at":"2026-10-15T10:30:00+05:30","ended_at":"2026-10-15T11:30:00+05:30","participants":["Sam Okonkwo"],"language_code":"en","recording_url":"fixture://recordings/M-113","segments":[{"segment_id":"m113-s1","start_ms":0,"end_ms":30000,"speaker":"Sam Okonkwo","text":"Capacity review canceled; autoscale thresholds unchanged pending load tests."}]},
+    "analysis":{"summary":"Meeting canceled; last notes kept autoscale thresholds unchanged pending load test data.","decisions":[],"action_items":[],"open_questions":["Reschedule capacity review after latest load test?"],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-114","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-114","title":"Engineering guild — observability","project_id":"payments","team":"Platform","started_at":"2026-10-15T15:00:00+05:30","ended_at":"2026-10-15T16:00:00+05:30","participants":["Jordan Lee"],"language_code":"en","recording_url":"fixture://recordings/M-114","segments":[{"segment_id":"m114-s1","start_ms":0,"end_ms":30000,"speaker":"Jordan Lee","text":"Agreed on lotus.service and lotus.tenant as required span attributes."}]},
+    "analysis":{"summary":"Guild agreed on standard trace tags and a shared dashboard template for new services.","decisions":[{"text":"Adopt lotus.service and lotus.tenant as required span attributes.","timestamp_ms":0,"evidence_segment_ids":["m114-s1"]}],"action_items":[{"text":"Publish dashboard template to internal docs.","owner":"Jordan Lee","due_date":"2026-10-22","timestamp_ms":0}],"open_questions":[],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-115","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-115","title":"Release readiness checkpoint","project_id":"payments","team":"Payments","started_at":"2026-10-16T09:00:00+05:30","ended_at":"2026-10-16T10:30:00+05:30","participants":["Morgan Patel"],"language_code":"en","recording_url":"fixture://recordings/M-115","segments":[{"segment_id":"m115-s1","start_ms":0,"end_ms":30000,"speaker":"Morgan Patel","text":"Release candidate passed smoke tests; staged rollout pending one integration test fix."}]},
+    "analysis":{"summary":"Release candidate passed smoke tests; go decision pending one flaky integration test fix.","decisions":[{"text":"Proceed with staged rollout if integration test stabilizes by Friday.","timestamp_ms":0,"evidence_segment_ids":["m115-s1"]}],"action_items":[{"text":"Finalize customer comms draft.","owner":"Morgan Patel","due_date":"2026-10-16","timestamp_ms":0}],"open_questions":["Who approves rollback if error budget burns in canary?"],"anomalies":[]}
+  },
+  {
+    "meeting_id":"M-116","tenant_id":"demo","acl_principals":["group:demo"],
+    "transcript":{"calendar_event_id":"cal-116","title":"Weekly product sync","project_id":"payments","team":"Payments","started_at":"2026-10-16T11:00:00+05:30","ended_at":"2026-10-16T11:45:00+05:30","participants":["Alex Rivera"],"language_code":"en","recording_url":"fixture://recordings/M-116","segments":[{"segment_id":"m116-s1","start_ms":0,"end_ms":30000,"speaker":"Alex Rivera","text":"Sprint health is green; calendar UI remains a top demo priority."}]},
+    "analysis":{"summary":"Sprint health is green; calendar UI and evidence drawer remain top demo priorities.","decisions":[{"text":"Hold scope: UI polish only, no backend contract changes this sprint.","timestamp_ms":0,"evidence_segment_ids":["m116-s1"]}],"action_items":[{"text":"Sync with API team on calendar fixture timeline.","owner":"Alex Rivera","due_date":null,"timestamp_ms":0}],"open_questions":["When should calendar events read from /v1/meetings?"],"anomalies":[]}
   }
 ]

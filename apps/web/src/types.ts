@@ -11,6 +11,37 @@ export type Evidence = {
   score: number | null;
 };
 
+export type CalendarEvent = {
+  event_id: string;
+  meeting_id: string;
+  project_id: string;
+  title: string;
+  organizer: string;
+  organizer_initials: string;
+  location: string | null;
+  description: string;
+  started_at: string;
+  ended_at: string;
+  canceled: boolean;
+  recurring: boolean;
+};
+
+export type MeetingAnalysis = {
+  summary: string;
+  decisions: { text: string }[];
+  action_items: { text: string; owner: string | null; due_date: string | null }[];
+  open_questions: string[];
+};
+
+export type MeetingRecord = {
+  meeting_id: string;
+  transcript: {
+    recording_url: string | null;
+    title: string;
+  };
+  analysis: MeetingAnalysis | null;
+};
+
 export type GroundedAnswer = {
   answer: string;
   evidence: Evidence[];

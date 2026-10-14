@@ -181,3 +181,18 @@ class MeetingListItem(StrictModel):
     ended_at: datetime
     language_code: str
     status: str
+
+
+class CalendarEventItem(StrictModel):
+    event_id: str
+    meeting_id: str
+    project_id: str
+    title: str
+    organizer: str
+    organizer_initials: str
+    location: str | None = None
+    description: str
+    started_at: datetime
+    ended_at: datetime
+    canceled: bool = False
+    recurring: bool = False

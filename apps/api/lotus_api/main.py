@@ -6,9 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import get_auth_context
 from .config import get_settings
+from .calendar import list_calendar_events
 from .meetings import process_meeting
 from .models import (
     AuthContext,
+    CalendarEventItem,
     ChatRequest,
     GroundedAnswer,
     MeetingListItem,
@@ -74,6 +76,16 @@ def get_meeting_endpoint(
     if record is None:
         raise HTTPException(status_code=404, detail="Meeting not found")
     return record
+
+
+@app.get("/v1/calendar/events", response_model=list[CalendarEventItem])
+def list_calendar_events_endpoint(
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+    project_id: str | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> list[CalendarEventItem]:
+    return list_calendar_events(auth, project_id, date_from, date_to)
 
 
 @app.get("/v1/meetings", response_model=list[MeetingListItem])
