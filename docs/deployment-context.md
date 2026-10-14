@@ -2,10 +2,13 @@
 
 ## Current state
 
-Deployment is not yet implemented. There is no application Dockerfile, Cloud Run service, Cloud SQL
-instance, migration job, or Terraform configuration in this repository. `docker-compose.yml` only
-runs local PostgreSQL 17 + pgvector. Never describe Lotus as deployed until a live URL and smoke
-tests exist.
+The repository has a production multi-stage `Dockerfile` and
+`infra/deploy-cloud-run-demo.sh`. Cloud Run service `lotus` is deployed in `asia-south1` at
+`https://lotus-6n3idqotvq-el.a.run.app`; revision `lotus-00001-8pp` initially received 100% of
+traffic. Public health, readiness, auth-configuration, and SPA smoke tests passed on 2026-10-15.
+The deployed demo uses the in-memory fixture store and live Agent Platform runtime. Google login
+will not work until the exact Cloud Run origin is added to the OAuth client's Authorized JavaScript
+origins. There is no Cloud SQL instance, migration job, or Terraform configuration yet.
 
 ## Target architecture
 
@@ -22,13 +25,14 @@ chooses another region; keep Agent Platform and embeddings on their configured `
 
 ## Required deployment work
 
-1. Add a multi-stage Dockerfile that builds the Vite assets and installs Python dependencies.
-2. Make FastAPI serve the SPA and static assets without intercepting `/v1` routes.
+1. Add `https://lotus-6n3idqotvq-el.a.run.app` to the OAuth Web client's authorized JavaScript
+   origins and run an authenticated browser smoke test.
+2. Confirm Cloud SQL's continuous cost before provisioning it.
 3. Provision Cloud SQL PostgreSQL, enable `vector`, run Alembic, and seed the active live model.
 4. Store the database credential in Secret Manager; attach Cloud SQL through the Cloud Run service.
-5. Use a dedicated runtime service account with least-privilege Agent Platform, Cloud SQL, and
+5. Extend the dedicated runtime service account with least-privilege Cloud SQL and secret access.
    secret access. Use service identity/ADC—never ship a service-account key.
-6. Deploy with `AUTH_MODE=google`, the public OAuth client ID, and explicit allowed emails/domains.
+6. Switch the deployed service from `STORE_BACKEND=memory` to `STORE_BACKEND=postgres`.
 7. Start with `max-instances=1`, conservative concurrency, and the application rate limiter.
 8. Add the exact Cloud Run HTTPS origin to the OAuth Web client and run authenticated smoke tests.
 

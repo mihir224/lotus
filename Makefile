@@ -1,4 +1,4 @@
-.PHONY: api db-up db-down migrate seed test lint web-install web-dev
+.PHONY: api db-up db-down migrate seed test lint web-install web-dev web-build docker-build
 
 api:
 	uv run uvicorn --app-dir apps/api lotus_api.main:app --reload --port 8000
@@ -26,3 +26,9 @@ web-install:
 
 web-dev:
 	npm run dev --prefix apps/web
+
+web-build:
+	npm run build --prefix apps/web
+
+docker-build:
+	docker build -t lotus:local .

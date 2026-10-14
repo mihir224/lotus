@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from time import perf_counter
 from typing import Annotated
 from uuid import uuid4
@@ -8,6 +9,7 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
+from fastapi.staticfiles import StaticFiles
 
 from .auth import get_auth_context
 from .calendar import list_calendar_events
@@ -199,3 +201,10 @@ def list_meetings_endpoint(
         needle = topic.casefold()
         rows = [row for row in rows if needle in row.title.casefold()]
     return rows
+
+
+# Cloud Run serves the built Vite app and API from one HTTPS origin. Keep this
+# mount last so it can never shadow the explicit /v1 routes above.
+web_dist = Path(__file__).resolve().parents[3] / "apps" / "web" / "dist"
+if web_dist.is_dir():
+    app.mount("/", StaticFiles(directory=web_dist, html=True), name="web")

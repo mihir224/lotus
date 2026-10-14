@@ -52,3 +52,26 @@ The Google Cloud CLI can automate API enablement, service accounts and IAM, Arti
 Cloud SQL, Secret Manager, image builds, migration/seed jobs, Cloud Run deployment, scaling limits,
 and smoke tests. Creating/configuring the Google Auth Platform branding and Web OAuth client is the
 one manual console step in the recommended workflow.
+
+## First Cloud Run deployment
+
+The initial script intentionally uses the in-memory fixture store so Cloud Run can be validated
+before provisioning continuously billed Cloud SQL. It uses live Agent Platform agents and
+embeddings, allows only the configured Google users, scales to zero, and caps the service at one
+instance.
+
+```bash
+gcloud auth login
+export GOOGLE_OAUTH_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+export ALLOWED_GOOGLE_EMAILS="alice@example.com,bob@example.com"
+./infra/deploy-cloud-run-demo.sh
+```
+
+After deployment, add the printed HTTPS origin to the OAuth client's **Authorized JavaScript
+origins**, then open the URL and sign in. Do not add a path or trailing slash to the origin.
+
+The current demo service origin is:
+
+```text
+https://lotus-6n3idqotvq-el.a.run.app
+```
