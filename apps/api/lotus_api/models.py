@@ -32,6 +32,8 @@ class AuthContext(StrictModel):
     principals: tuple[str, ...]
     email: str | None = None
     name: str | None = None
+    designation: str | None = None
+    picture_url: str | None = None
 
 
 class AuthConfig(StrictModel):
@@ -43,6 +45,8 @@ class AuthenticatedUser(StrictModel):
     user_id: str
     email: str | None = None
     name: str | None = None
+    designation: str | None = None
+    picture_url: str | None = None
 
 
 class ChatRequest(StrictModel):
@@ -223,6 +227,163 @@ class CalendarEventItem(StrictModel):
     ended_at: datetime
     canceled: bool = False
     recurring: bool = False
+
+
+class CalendarEventCreate(StrictModel):
+    title: str = Field(min_length=1, max_length=200)
+    project_id: str = Field(default="payments", min_length=1, max_length=128)
+    location: str | None = None
+    description: str = ""
+    started_at: datetime
+    ended_at: datetime
+    attendees: list[str] = Field(default_factory=list)
+    video_meeting: bool = False
+
+
+BoardIssueStatus = Literal[
+    "ready_to_start",
+    "development",
+    "review",
+    "testing",
+    "done",
+]
+BoardIssueType = Literal["bug", "user_story"]
+BoardIssuePriority = Literal["low", "medium", "high"]
+
+
+class BoardAssignee(StrictModel):
+    assignee_id: str
+    name: str
+    initials: str
+    avatar_color: str = "#2563eb"
+
+
+class BoardTeam(StrictModel):
+    team_id: str
+    name: str
+    key_prefix: str
+
+
+class BoardMeta(StrictModel):
+    project_id: str
+    project_name: str
+    board_title: str
+
+
+class BoardIssueItem(StrictModel):
+    issue_key: str
+    project_id: str
+    team_id: str
+    title: str
+    issue_type: BoardIssueType
+    feature_key: str
+    feature_title: str
+    description: str = ""
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    priority: BoardIssuePriority = "medium"
+    story_points: int = Field(default=0, ge=0, le=99)
+    sprint: str | None = None
+    reporter_id: str
+    status: BoardIssueStatus
+    assignee_id: str
+
+
+class BoardIssueUpdate(StrictModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    issue_type: BoardIssueType | None = None
+    status: BoardIssueStatus | None = None
+    assignee_id: str | None = None
+    description: str | None = None
+    acceptance_criteria: list[str] | None = None
+    priority: BoardIssuePriority | None = None
+    story_points: int | None = Field(default=None, ge=0, le=99)
+    reporter_id: str | None = None
+
+
+BOARD_ISSUE_UNASSIGNED = "unassigned"
+
+
+class BoardIssueCreate(StrictModel):
+    title: str = Field(min_length=1, max_length=200)
+    project_id: str
+    team_id: str
+    feature_key: str = Field(min_length=1, max_length=32)
+    issue_type: BoardIssueType = "user_story"
+    status: BoardIssueStatus = "ready_to_start"
+    assignee_id: str = BOARD_ISSUE_UNASSIGNED
+    reporter_id: str = BOARD_ISSUE_UNASSIGNED
+    description: str = ""
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    priority: BoardIssuePriority = "medium"
+    story_points: int = Field(default=0, ge=0, le=99)
+
+
+class WorkBoardResponse(StrictModel):
+    board: BoardMeta
+    teams: list[BoardTeam]
+    assignees: list[BoardAssignee]
+    issues: list[BoardIssueItem]
+
+
+DocSourceType = Literal[
+    "architecture",
+    "runbook",
+    "product",
+    "adr",
+    "policy",
+    "issue",
+    "product_doc",
+    "release_note",
+    "guide",
+]
+
+
+class DocSourceSummary(StrictModel):
+    source_id: str
+    title: str
+    team: str
+    source_type: str
+    source_system: str
+    updated_at: str | None = None
+
+
+class DocTeamGroup(StrictModel):
+    team: str
+    pages: list[DocSourceSummary]
+
+
+class DocCatalogResponse(StrictModel):
+    project_id: str
+    groups: list[DocTeamGroup]
+
+
+class DocPageDetail(StrictModel):
+    source_id: str
+    project_id: str
+    title: str
+    team: str
+    source_type: str
+    source_system: str
+    source_uri: str | None = None
+    body: str
+    updated_at: str | None = None
+
+
+class DocSearchHit(StrictModel):
+    source_id: str
+    title: str
+    team: str
+    source_type: str
+    snippet: str
+    updated_at: str | None = None
+
+
+class DocSourceCreate(StrictModel):
+    project_id: str = Field(min_length=1, max_length=128)
+    title: str = Field(min_length=1, max_length=240)
+    team: str = Field(min_length=1, max_length=120)
+    source_type: DocSourceType = "guide"
+    body: str = Field(min_length=1, max_length=50_000)
 
 
 class RunEvent(StrictModel):

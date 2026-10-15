@@ -1,0 +1,4 @@
+[
+  { "team_id": "platform", "name": "Platform", "key_prefix": "PROJ" },
+  { "team_id": "payments", "name": "Payments", "key_prefix": "PAY" }
+]

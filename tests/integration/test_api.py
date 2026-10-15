@@ -72,6 +72,30 @@ def test_summarize_requires_an_authorized_transcript() -> None:
     assert response.status_code == 404
 
 
+def test_create_calendar_event_appears_in_list() -> None:
+    created = client.post(
+        "/v1/calendar/events",
+        json={
+            "title": "API test sync",
+            "started_at": "2026-10-14T16:00:00+05:30",
+            "ended_at": "2026-10-14T16:30:00+05:30",
+            "description": "Created from integration test",
+            "video_meeting": True,
+        },
+    )
+    assert created.status_code == 200
+    body = created.json()
+    listing = client.get(
+        "/v1/calendar/events",
+        params={
+            "project_id": "payments",
+            "date_from": "2026-10-14T00:00:00+05:30",
+            "date_to": "2026-10-15T00:00:00+05:30",
+        },
+    )
+    assert any(row["event_id"] == body["event_id"] for row in listing.json())
+
+
 def test_calendar_events_fixture_week() -> None:
     response = client.get(
         "/v1/calendar/events",
@@ -83,9 +107,94 @@ def test_calendar_events_fixture_week() -> None:
     )
     assert response.status_code == 200
     events = response.json()
-    assert len(events) == 10
+    assert len(events) >= 10
     assert events[0]["meeting_id"] == "M-107"
     assert all(row["event_id"].startswith("cal-") for row in events)
+
+
+def test_work_board_lists_and_updates_issue() -> None:
+    board = client.get("/v1/work-board", params={"project_id": "payments", "team_id": "platform"})
+    assert board.status_code == 200
+    body = board.json()
+    assert body["board"]["board_title"] == "Delivery board"
+    assert len(body["issues"]) == 15
+    patched = client.patch(
+        "/v1/work-board/issues/PROJ-101",
+        json={"status": "development"},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["status"] == "development"
+    again = client.get("/v1/work-board", params={"team_id": "platform"})
+    match = next(row for row in again.json()["issues"] if row["issue_key"] == "PROJ-101")
+    assert match["status"] == "development"
+
+
+def test_docs_catalog_search_and_create() -> None:
+    catalog = client.get("/v1/docs/catalog", params={"project_id": "payments"})
+    assert catalog.status_code == 200
+    groups = catalog.json()["groups"]
+    assert len(groups) >= 1
+    total_pages = sum(len(group["pages"]) for group in groups)
+    assert total_pages >= 10
+
+    search = client.get(
+        "/v1/docs/search",
+        params={"project_id": "payments", "q": "retry"},
+    )
+    assert search.status_code == 200
+    assert len(search.json()) >= 1
+
+    detail = client.get(
+        "/v1/docs/sources/ADR-017",
+        params={"project_id": "payments"},
+    )
+    assert detail.status_code == 200
+    assert "jitter" in detail.json()["body"].casefold()
+
+    created = client.post(
+        "/v1/docs/sources",
+        json={
+            "project_id": "payments",
+            "title": "Lotus onboarding note",
+            "team": "Platform",
+            "source_type": "guide",
+            "body": "New hires should read the checkout runbooks first.",
+        },
+    )
+    assert created.status_code == 200
+    source_id = created.json()["source_id"]
+    assert source_id.startswith("LOTUS-")
+
+    again = client.get("/v1/docs/catalog", params={"project_id": "payments"})
+    ids = {
+        page["source_id"]
+        for group in again.json()["groups"]
+        for page in group["pages"]
+    }
+    assert source_id in ids
+
+
+def test_create_work_board_issue() -> None:
+    created = client.post(
+        "/v1/work-board/issues",
+        json={
+            "title": "New trace dashboard",
+            "project_id": "payments",
+            "team_id": "platform",
+            "feature_key": "PROJ-42",
+            "assignee_id": "unassigned",
+            "reporter_id": "unassigned",
+        },
+    )
+    assert created.status_code == 200
+    body = created.json()
+    assert body["issue_key"] == "PROJ-116"
+    assert body["feature_title"] == "Standardize observability across services"
+    assert body["status"] == "ready_to_start"
+    assert body["assignee_id"] == "unassigned"
+    board = client.get("/v1/work-board", params={"team_id": "platform"})
+    keys = {row["issue_key"] for row in board.json()["issues"]}
+    assert "PROJ-116" in keys
 
 
 def test_no_answer_abstains() -> None:
