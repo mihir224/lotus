@@ -30,6 +30,26 @@ const suggestions = [
   "What is the lunar office dress code?"
 ];
 
+function ThumbIcon({ down = false }: { down?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="response-action-icon"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <g transform={down ? "rotate(180 12 12)" : undefined}>
+        <path d="M7 10v12" />
+        <path d="M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 8a2 2 0 0 1-1.9 1.4H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.8a2 2 0 0 0 1.8-1.1L12 2a3.1 3.1 0 0 1 3 3.9Z" />
+      </g>
+    </svg>
+  );
+}
+
 export function App() {
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const [session, setSession] = useState<AuthSession | null>(storedAuthSession);
@@ -220,7 +240,7 @@ export function App() {
                         title="Like"
                         onClick={() => setFeedback(feedback === "like" ? null : "like")}
                       >
-                        <span aria-hidden="true">👍</span>
+                        <ThumbIcon />
                       </button>
                       <button
                         type="button"
@@ -229,7 +249,7 @@ export function App() {
                         title="Dislike"
                         onClick={() => setFeedback(feedback === "dislike" ? null : "dislike")}
                       >
-                        <span aria-hidden="true">👎</span>
+                        <ThumbIcon down />
                       </button>
                       <button
                         type="button"

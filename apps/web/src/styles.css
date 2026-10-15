@@ -80,7 +80,8 @@ button { cursor: pointer; }
 .response-actions button { min-width: 32px; height: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 8px; padding: 0 8px; background: transparent; color: #737b75; font-size: 11px; }
 .response-actions button:hover { background: #ebe8df; color: #274936; }
 .response-actions button.active { background: #dcecdf; color: #1f5b43; }
-.response-actions button span[aria-hidden="true"] { font-size: 13px; filter: grayscale(1); }
+.response-action-icon { width: 16px; height: 16px; display: block; }
+.response-actions button span[aria-hidden="true"] { font-size: 13px; }
 .error { margin: 16px 0; padding: 12px; border-radius: 12px; background: #fff0ed; color: #9f3e32; }
 .composer { margin-top: auto; padding-top: 28px; }
 .composer textarea { width: 100%; resize: vertical; min-height: 96px; border: 1px solid #cfcbbf; outline: none; border-radius: 17px; padding: 16px; background: #fffdf7; color: #27312b; box-shadow: 0 8px 30px #3b463f15; }

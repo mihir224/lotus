@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     router_model: str = "gemini-3.7-flash"
     embedding_model: str = "gemini-embedding-001"
     embedding_dimensions: int = 768
-    agent_timeout_seconds: float = 45.0
-    web_agent_timeout_seconds: float = 90.0
+    agent_timeout_seconds: float = 90.0
+    web_agent_timeout_seconds: float = 180.0
     auth_mode: str = "dev"
     google_oauth_client_id: str | None = None
     allowed_google_emails: str = ""
