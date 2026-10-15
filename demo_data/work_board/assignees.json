@@ -1,0 +1,9 @@
+[
+  { "assignee_id": "jordan-lee", "name": "Jordan Lee", "initials": "JL", "avatar_color": "#cce5dc" },
+  { "assignee_id": "morgan-patel", "name": "Morgan Patel", "initials": "MP", "avatar_color": "#e6ddd4" },
+  { "assignee_id": "riley-chen", "name": "Riley Chen", "initials": "RC", "avatar_color": "#c8dde8" },
+  { "assignee_id": "demo-engineer", "name": "Demo Engineer", "initials": "DE", "avatar_color": "#dcecdf" },
+  { "assignee_id": "alex-kim", "name": "Alex Kim", "initials": "AK", "avatar_color": "#e8eef5" },
+  { "assignee_id": "sam-ortiz", "name": "Sam Ortiz", "initials": "SO", "avatar_color": "#f5e6cc" },
+  { "assignee_id": "taylor-ng", "name": "Taylor Ng", "initials": "TN", "avatar_color": "#d8e8f0" }
+]

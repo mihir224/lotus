@@ -1,0 +1,22 @@
+[
+  {
+    "feature_key": "PROJ-42",
+    "title": "Standardize observability across services",
+    "team_id": "platform"
+  },
+  {
+    "feature_key": "PROJ-58",
+    "title": "Shared dashboard template for new services",
+    "team_id": "platform"
+  },
+  {
+    "feature_key": "PAY-88",
+    "title": "Checkout retry reliability",
+    "team_id": "payments"
+  },
+  {
+    "feature_key": "PAY-92",
+    "title": "Payments on-call readiness",
+    "team_id": "payments"
+  }
+]

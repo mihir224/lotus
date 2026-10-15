@@ -112,6 +112,46 @@ def test_calendar_events_fixture_week() -> None:
     assert all(row["event_id"].startswith("cal-") for row in events)
 
 
+def test_work_board_lists_and_updates_issue() -> None:
+    board = client.get("/v1/work-board", params={"project_id": "payments", "team_id": "platform"})
+    assert board.status_code == 200
+    body = board.json()
+    assert body["board"]["board_title"] == "Delivery board"
+    assert len(body["issues"]) == 15
+    patched = client.patch(
+        "/v1/work-board/issues/PROJ-101",
+        json={"status": "development"},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["status"] == "development"
+    again = client.get("/v1/work-board", params={"team_id": "platform"})
+    match = next(row for row in again.json()["issues"] if row["issue_key"] == "PROJ-101")
+    assert match["status"] == "development"
+
+
+def test_create_work_board_issue() -> None:
+    created = client.post(
+        "/v1/work-board/issues",
+        json={
+            "title": "New trace dashboard",
+            "project_id": "payments",
+            "team_id": "platform",
+            "feature_key": "PROJ-42",
+            "assignee_id": "unassigned",
+            "reporter_id": "unassigned",
+        },
+    )
+    assert created.status_code == 200
+    body = created.json()
+    assert body["issue_key"] == "PROJ-116"
+    assert body["feature_title"] == "Standardize observability across services"
+    assert body["status"] == "ready_to_start"
+    assert body["assignee_id"] == "unassigned"
+    board = client.get("/v1/work-board", params={"team_id": "platform"})
+    keys = {row["issue_key"] for row in board.json()["issues"]}
+    assert "PROJ-116" in keys
+
+
 def test_no_answer_abstains() -> None:
     response = client.post(
         "/v1/chat/messages",

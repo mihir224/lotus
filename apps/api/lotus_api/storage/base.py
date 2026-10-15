@@ -4,6 +4,8 @@ from typing import Protocol
 
 from ..models import (
     AuthContext,
+    BoardIssueItem,
+    BoardIssueUpdate,
     CalendarEventItem,
     Evidence,
     MeetingListItem,
@@ -71,3 +73,24 @@ class KnowledgeStore(Protocol):
         item: CalendarEventItem,
         acl_principals: list[str] | None = None,
     ) -> CalendarEventItem: ...
+
+    def list_board_issues(
+        self,
+        auth: AuthContext,
+        project_id: str | None = None,
+        team_id: str | None = None,
+    ) -> list[BoardIssueItem]: ...
+
+    def update_board_issue(
+        self,
+        issue_key: str,
+        auth: AuthContext,
+        patch: BoardIssueUpdate,
+    ) -> BoardIssueItem | None: ...
+
+    def upsert_board_issue(
+        self,
+        auth: AuthContext,
+        item: BoardIssueItem,
+        acl_principals: list[str] | None = None,
+    ) -> BoardIssueItem: ...

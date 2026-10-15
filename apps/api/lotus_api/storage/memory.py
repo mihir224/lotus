@@ -9,6 +9,8 @@ from ..config import Settings
 from ..embeddings import Embedder
 from ..models import (
     AuthContext,
+    BoardIssueItem,
+    BoardIssueUpdate,
     CalendarEventItem,
     Evidence,
     MeetingAnalysis,
@@ -40,6 +42,7 @@ class MemoryKnowledgeStore:
         self.meetings: dict[str, MeetingRecord] = {}
         self.transcript_chunks: dict[str, list[dict[str, Any]]] = {}
         self.calendar_events: dict[str, dict[str, Any]] = {}
+        self.board_issues: dict[str, dict[str, Any]] = {}
         self.seed()
 
     def ready(self) -> bool:
@@ -88,10 +91,31 @@ class MemoryKnowledgeStore:
                 "tenant_id": payload["tenant_id"],
                 "acl_principals": payload.get("acl_principals", ["group:demo"]),
             }
+
+        board_rows = self._load("work_board/issues.json")
+        for raw in board_rows:
+            payload = dict(raw)
+            issue = BoardIssueItem.model_validate(
+                {
+                    key: value
+                    for key, value in payload.items()
+                    if key not in {"tenant_id", "acl_principals"}
+                }
+            )
+            self.upsert_board_issue(
+                AuthContext(
+                    tenant_id=payload["tenant_id"],
+                    user_id="seed",
+                    principals=tuple(payload.get("acl_principals", ["group:demo"])),
+                ),
+                issue,
+                list(payload.get("acl_principals", ["group:demo"])),
+            )
         return {
             "documents": len(self.documents),
             "meetings": len(self.meetings),
             "calendar_events": len(calendar_rows),
+            "board_issues": len(board_rows),
         }
 
     def _index_transcript(self, record: MeetingRecord, principals: list[str]) -> None:
@@ -319,3 +343,55 @@ class MemoryKnowledgeStore:
             "acl_principals": principals,
         }
         return item
+
+    def list_board_issues(
+        self,
+        auth: AuthContext,
+        project_id: str | None = None,
+        team_id: str | None = None,
+    ) -> list[BoardIssueItem]:
+        result: list[BoardIssueItem] = []
+        for row in self.board_issues.values():
+            if not self._calendar_authorized(row, auth):
+                continue
+            item: BoardIssueItem = row["item"]
+            if project_id and item.project_id != project_id:
+                continue
+            if team_id and item.team_id != team_id:
+                continue
+            result.append(item)
+        return sorted(result, key=lambda row: row.issue_key)
+
+    def upsert_board_issue(
+        self,
+        auth: AuthContext,
+        item: BoardIssueItem,
+        acl_principals: list[str] | None = None,
+    ) -> BoardIssueItem:
+        principals = acl_principals if acl_principals is not None else list(auth.principals)
+        self.board_issues[item.issue_key] = {
+            "item": item,
+            "tenant_id": auth.tenant_id,
+            "acl_principals": principals,
+        }
+        return item
+
+    def update_board_issue(
+        self,
+        issue_key: str,
+        auth: AuthContext,
+        patch: BoardIssueUpdate,
+    ) -> BoardIssueItem | None:
+        row = self.board_issues.get(issue_key)
+        if row is None or not self._calendar_authorized(row, auth):
+            return None
+        current: BoardIssueItem = row["item"]
+        updates = patch.model_dump(exclude_unset=True)
+        filtered = {
+            key: value
+            for key, value in updates.items()
+            if key == "acceptance_criteria" or value is not None
+        }
+        updated = current.model_copy(update=filtered)
+        row["item"] = updated
+        return updated

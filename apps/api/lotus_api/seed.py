@@ -5,7 +5,7 @@ def main() -> None:
     counts = get_store().seed()
     print(
         f"Seeded {counts['documents']} document chunks, {counts['meetings']} meetings, "
-        f"and {counts['calendar_events']} calendar events."
+        f"{counts['calendar_events']} calendar events, and {counts['board_issues']} board issues."
     )
 
 

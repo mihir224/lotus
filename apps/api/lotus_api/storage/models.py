@@ -110,6 +110,34 @@ class CalendarEventRow(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class BoardIssueRow(Base):
+    __tablename__ = "board_issues"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "issue_key"),
+        Index("ix_board_scope_team", "tenant_id", "project_id", "team_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    issue_key: Mapped[str] = mapped_column(String(32), nullable=False)
+    tenant_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    team_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    issue_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    feature_key: Mapped[str] = mapped_column(String(32), nullable=False)
+    feature_title: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    acceptance_criteria: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    priority: Mapped[str] = mapped_column(String(16), nullable=False, default="medium")
+    story_points: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sprint: Mapped[str | None] = mapped_column(String(80))
+    reporter_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    assignee_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    acl_principals: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class TranscriptEmbeddingRow(Base):
     __tablename__ = "transcript_embeddings"
     __table_args__ = (

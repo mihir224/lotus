@@ -19,6 +19,9 @@ from .models import (
     AuthConfig,
     AuthContext,
     AuthenticatedUser,
+    BoardIssueCreate,
+    BoardIssueItem,
+    BoardIssueUpdate,
     CalendarEventCreate,
     CalendarEventItem,
     ChatRequest,
@@ -26,10 +29,14 @@ from .models import (
     MeetingListItem,
     MeetingRecord,
     MeetingTranscriptInput,
+    WorkBoardResponse,
 )
 from .rate_limit import FixedWindowRateLimiter
 from .service import answer_chat
 from .storage import get_store
+from .work_board import create_board_issue
+from .work_board import get_work_board
+from .work_board import update_board_issue as patch_board_issue
 
 settings = get_settings()
 logger = logging.getLogger("uvicorn.error.lotus")
@@ -58,7 +65,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["Authorization", "Content-Type", "X-Lotus-Tenant", "X-Lotus-User"],
 )
 
@@ -195,6 +202,42 @@ def create_calendar_event_endpoint(
 ) -> CalendarEventItem:
     try:
         return create_calendar_event(get_store(), auth, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/v1/work-board", response_model=WorkBoardResponse)
+def get_work_board_endpoint(
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+    project_id: str | None = None,
+    team_id: str | None = None,
+) -> WorkBoardResponse:
+    return get_work_board(get_store(), auth, project_id, team_id)
+
+
+@app.post("/v1/work-board/issues", response_model=BoardIssueItem)
+def create_work_board_issue_endpoint(
+    payload: BoardIssueCreate,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+) -> BoardIssueItem:
+    try:
+        return create_board_issue(get_store(), auth, payload)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Team not found") from None
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.patch("/v1/work-board/issues/{issue_key}", response_model=BoardIssueItem)
+def patch_work_board_issue_endpoint(
+    issue_key: str,
+    payload: BoardIssueUpdate,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+) -> BoardIssueItem:
+    try:
+        return patch_board_issue(get_store(), issue_key, auth, payload)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Issue not found") from None
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 

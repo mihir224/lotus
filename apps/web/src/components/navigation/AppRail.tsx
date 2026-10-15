@@ -7,7 +7,7 @@ type AppRailProps = {
 };
 
 const icons: Record<AppSection, typeof PlannerIcon> = {
-  planner: PlannerIcon,
+  "work-board": PlannerIcon,
   docs: DocsIcon,
   calendar: CalendarIcon,
   chat: ChatIcon

@@ -220,3 +220,88 @@ class CalendarEventCreate(StrictModel):
     ended_at: datetime
     attendees: list[str] = Field(default_factory=list)
     video_meeting: bool = False
+
+
+BoardIssueStatus = Literal[
+    "ready_to_start",
+    "development",
+    "review",
+    "testing",
+    "done",
+]
+BoardIssueType = Literal["bug", "user_story"]
+BoardIssuePriority = Literal["low", "medium", "high"]
+
+
+class BoardAssignee(StrictModel):
+    assignee_id: str
+    name: str
+    initials: str
+    avatar_color: str = "#2563eb"
+
+
+class BoardTeam(StrictModel):
+    team_id: str
+    name: str
+    key_prefix: str
+
+
+class BoardMeta(StrictModel):
+    project_id: str
+    project_name: str
+    board_title: str
+
+
+class BoardIssueItem(StrictModel):
+    issue_key: str
+    project_id: str
+    team_id: str
+    title: str
+    issue_type: BoardIssueType
+    feature_key: str
+    feature_title: str
+    description: str = ""
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    priority: BoardIssuePriority = "medium"
+    story_points: int = Field(default=0, ge=0, le=99)
+    sprint: str | None = None
+    reporter_id: str
+    status: BoardIssueStatus
+    assignee_id: str
+
+
+class BoardIssueUpdate(StrictModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    issue_type: BoardIssueType | None = None
+    status: BoardIssueStatus | None = None
+    assignee_id: str | None = None
+    description: str | None = None
+    acceptance_criteria: list[str] | None = None
+    priority: BoardIssuePriority | None = None
+    story_points: int | None = Field(default=None, ge=0, le=99)
+    reporter_id: str | None = None
+
+
+BOARD_ISSUE_UNASSIGNED = "unassigned"
+
+
+class BoardIssueCreate(StrictModel):
+    title: str = Field(min_length=1, max_length=200)
+    project_id: str
+    team_id: str
+    feature_key: str = Field(min_length=1, max_length=32)
+    issue_type: BoardIssueType = "user_story"
+    status: BoardIssueStatus = "ready_to_start"
+    assignee_id: str = BOARD_ISSUE_UNASSIGNED
+    reporter_id: str = BOARD_ISSUE_UNASSIGNED
+    description: str = ""
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    priority: BoardIssuePriority = "medium"
+    story_points: int = Field(default=0, ge=0, le=99)
+
+
+class WorkBoardResponse(StrictModel):
+    board: BoardMeta
+    teams: list[BoardTeam]
+    assignees: list[BoardAssignee]
+    issues: list[BoardIssueItem]

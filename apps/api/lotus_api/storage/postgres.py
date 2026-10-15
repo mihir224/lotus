@@ -11,6 +11,8 @@ from ..config import Settings
 from ..embeddings import Embedder
 from ..models import (
     AuthContext,
+    BoardIssueItem,
+    BoardIssueUpdate,
     CalendarEventItem,
     Evidence,
     MeetingAnalysis,
@@ -20,6 +22,7 @@ from ..models import (
     Scope,
 )
 from .models import (
+    BoardIssueRow,
     CalendarEventRow,
     DocumentEmbeddingRow,
     MeetingTranscriptRow,
@@ -100,10 +103,31 @@ class PostgresKnowledgeStore:
                 item,
                 list(payload.get("acl_principals", ["group:demo"])),
             )
+
+        board_rows = self._load("work_board/issues.json")
+        for raw in board_rows:
+            payload = dict(raw)
+            issue = BoardIssueItem.model_validate(
+                {
+                    key: value
+                    for key, value in payload.items()
+                    if key not in {"tenant_id", "acl_principals"}
+                }
+            )
+            self.upsert_board_issue(
+                AuthContext(
+                    tenant_id=payload["tenant_id"],
+                    user_id="seed",
+                    principals=tuple(payload.get("acl_principals", ["group:demo"])),
+                ),
+                issue,
+                list(payload.get("acl_principals", ["group:demo"])),
+            )
         return {
             "documents": len(documents),
             "meetings": len(self._load("meetings/meetings.json")),
             "calendar_events": len(calendar_rows),
+            "board_issues": len(board_rows),
         }
 
     def search_documents(
@@ -439,3 +463,113 @@ class PostgresKnowledgeStore:
                     setattr(row, key, value)
             session.commit()
         return item
+
+    @staticmethod
+    def _board_row_to_item(row: BoardIssueRow) -> BoardIssueItem:
+        return BoardIssueItem.model_validate(
+            {
+                "issue_key": row.issue_key,
+                "project_id": row.project_id,
+                "team_id": row.team_id,
+                "title": row.title,
+                "issue_type": row.issue_type,
+                "feature_key": row.feature_key,
+                "feature_title": row.feature_title,
+                "description": row.description,
+                "acceptance_criteria": row.acceptance_criteria,
+                "priority": row.priority,
+                "story_points": row.story_points,
+                "sprint": row.sprint,
+                "reporter_id": row.reporter_id,
+                "status": row.status,
+                "assignee_id": row.assignee_id,
+            }
+        )
+
+    def list_board_issues(
+        self,
+        auth: AuthContext,
+        project_id: str | None = None,
+        team_id: str | None = None,
+    ) -> list[BoardIssueItem]:
+        statement = select(BoardIssueRow).where(
+            BoardIssueRow.tenant_id == auth.tenant_id,
+            BoardIssueRow.acl_principals.op("&&")(list(auth.principals)),
+        )
+        if project_id:
+            statement = statement.where(BoardIssueRow.project_id == project_id)
+        if team_id:
+            statement = statement.where(BoardIssueRow.team_id == team_id)
+        statement = statement.order_by(BoardIssueRow.issue_key)
+        with Session(self.engine) as session:
+            rows = session.scalars(statement).all()
+        return [self._board_row_to_item(row) for row in rows]
+
+    def upsert_board_issue(
+        self,
+        auth: AuthContext,
+        item: BoardIssueItem,
+        acl_principals: list[str] | None = None,
+    ) -> BoardIssueItem:
+        principals = acl_principals if acl_principals is not None else list(auth.principals)
+        now = datetime.now(UTC)
+        with Session(self.engine) as session:
+            row = session.scalar(
+                select(BoardIssueRow).where(
+                    BoardIssueRow.tenant_id == auth.tenant_id,
+                    BoardIssueRow.issue_key == item.issue_key,
+                )
+            )
+            values = {
+                "issue_key": item.issue_key,
+                "tenant_id": auth.tenant_id,
+                "project_id": item.project_id,
+                "team_id": item.team_id,
+                "title": item.title,
+                "issue_type": item.issue_type,
+                "feature_key": item.feature_key,
+                "feature_title": item.feature_title,
+                "description": item.description,
+                "acceptance_criteria": item.acceptance_criteria,
+                "priority": item.priority,
+                "story_points": item.story_points,
+                "sprint": item.sprint,
+                "reporter_id": item.reporter_id,
+                "status": item.status,
+                "assignee_id": item.assignee_id,
+                "acl_principals": principals,
+                "updated_at": now,
+            }
+            if row is None:
+                session.add(BoardIssueRow(**values))
+            else:
+                for key, value in values.items():
+                    setattr(row, key, value)
+            session.commit()
+        return item
+
+    def update_board_issue(
+        self,
+        issue_key: str,
+        auth: AuthContext,
+        patch: BoardIssueUpdate,
+    ) -> BoardIssueItem | None:
+        with Session(self.engine) as session:
+            row = session.scalar(
+                select(BoardIssueRow).where(
+                    BoardIssueRow.tenant_id == auth.tenant_id,
+                    BoardIssueRow.issue_key == issue_key,
+                    BoardIssueRow.acl_principals.op("&&")(list(auth.principals)),
+                )
+            )
+            if row is None:
+                return None
+            updates = patch.model_dump(exclude_unset=True)
+            for key, value in updates.items():
+                if key == "acceptance_criteria" and value is not None:
+                    setattr(row, key, value)
+                elif value is not None:
+                    setattr(row, key, value)
+            row.updated_at = datetime.now(UTC)
+            session.commit()
+            return self._board_row_to_item(row)

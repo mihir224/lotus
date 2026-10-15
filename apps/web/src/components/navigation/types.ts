@@ -1,4 +1,4 @@
-export type AppSection = "planner" | "docs" | "calendar" | "chat";
+export type AppSection = "work-board" | "docs" | "calendar" | "chat";
 
 export type NavItem = {
   id: AppSection;
@@ -6,7 +6,7 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: "planner", label: "Planner" },
+  { id: "work-board", label: "Work Board" },
   { id: "docs", label: "Docs" },
   { id: "calendar", label: "Calendar" },
   { id: "chat", label: "Chat" }

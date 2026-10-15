@@ -5,6 +5,7 @@ import type { AppSection } from "./components/navigation/types";
 import { AIWorkspace } from "./components/workspace/AIWorkspace";
 import { EvidenceDrawer } from "./components/workspace/EvidenceDrawer";
 import { PlaceholderView } from "./components/workspace/PlaceholderView";
+import { WorkBoardView } from "./components/work-board/WorkBoardView";
 import {
   authHeaders,
   type AuthConfig,
@@ -77,8 +78,8 @@ export function App() {
 
   function renderMainContent() {
     switch (activeSection) {
-      case "planner":
-        return <PlaceholderView title="Welcome to Planner" />;
+      case "work-board":
+        return <WorkBoardView />;
       case "docs":
         return <PlaceholderView title="Welcome to Docs" />;
       case "calendar":
@@ -137,7 +138,15 @@ export function App() {
       <section className={`workspace${activeSection === "chat" ? "" : " workspace-two-col"}`}>
         <AppRail activeSection={activeSection} onSelect={setActiveSection} />
 
-        <section className={`conversation${activeSection === "calendar" ? " conversation-calendar" : ""}`}>
+        <section
+          className={`conversation${
+            activeSection === "calendar"
+              ? " conversation-calendar"
+              : activeSection === "work-board"
+                ? " conversation-board"
+                : ""
+          }`}
+        >
           {renderMainContent()}
         </section>
 
