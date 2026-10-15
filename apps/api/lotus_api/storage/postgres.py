@@ -13,6 +13,7 @@ from ..models import (
     AuthContext,
     Evidence,
     MeetingAnalysis,
+    MeetingAnalysisMetadata,
     MeetingListItem,
     MeetingRecord,
     MeetingTranscriptInput,
@@ -255,12 +256,20 @@ class PostgresKnowledgeStore:
         )
 
     def _to_record(self, row: MeetingTranscriptRow) -> MeetingRecord:
+        stored = row.analysis_json or {}
+        if "analysis" in stored:
+            analysis_json = stored.get("analysis")
+            metadata_json = stored.get("metadata")
+        else:
+            analysis_json = stored or None
+            metadata_json = None
         return MeetingRecord(
             meeting_id=row.meeting_id,
             tenant_id=row.tenant_id,
             transcript=MeetingTranscriptInput.model_validate(row.transcript_json),
-            analysis=(
-                MeetingAnalysis.model_validate(row.analysis_json) if row.analysis_json else None
+            analysis=MeetingAnalysis.model_validate(analysis_json) if analysis_json else None,
+            analysis_metadata=(
+                MeetingAnalysisMetadata.model_validate(metadata_json) if metadata_json else None
             ),
             status=row.processing_status,
             updated_at=row.updated_at,
@@ -287,7 +296,18 @@ class PostgresKnowledgeStore:
             )
             if row is None:
                 raise LookupError(record.meeting_id)
-            row.analysis_json = record.analysis.model_dump(mode="json") if record.analysis else None
+            row.analysis_json = (
+                {
+                    "analysis": record.analysis.model_dump(mode="json"),
+                    "metadata": (
+                        record.analysis_metadata.model_dump(mode="json")
+                        if record.analysis_metadata
+                        else None
+                    ),
+                }
+                if record.analysis
+                else None
+            )
             row.processing_status = record.status
             row.updated_at = record.updated_at
             session.commit()

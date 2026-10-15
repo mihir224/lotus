@@ -31,6 +31,7 @@ def analyze_transcript(transcript: MeetingTranscriptInput) -> MeetingAnalysis:
                     owner=owner_match.group(1) if owner_match else None,
                     due_date=due_match.group(1) if due_match else None,
                     timestamp_ms=segment.start_ms,
+                    evidence_segment_ids=[segment.segment_id],
                 )
             )
         if match := OPEN_QUESTION.search(segment.text):
@@ -71,6 +72,7 @@ def detect_content_anomalies(
                     anomaly_type="unowned_action",
                     severity="high",
                     description=f"Action item has no owner: {action.text}",
+                    evidence_segment_ids=action.evidence_segment_ids,
                 )
             )
         if not action.due_date:
@@ -79,6 +81,7 @@ def detect_content_anomalies(
                     anomaly_type="missing_due_date",
                     severity="medium",
                     description=f"Action item has no due date: {action.text}",
+                    evidence_segment_ids=action.evidence_segment_ids,
                 )
             )
     for question in open_questions:

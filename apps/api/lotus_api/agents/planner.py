@@ -24,6 +24,15 @@ def fixture_plan(request: ChatRequest, now: datetime | None = None) -> Execution
         "open question",
     )
     web_signals = ("web", "public", "internet", "current guidance", "research")
+    code_signals = (
+        "source code",
+        "codebase",
+        "repository",
+        "repo",
+        "implementation",
+        "function",
+        "source file",
+    )
     data_signals = (
         "document",
         "documentation",
@@ -46,7 +55,27 @@ def fixture_plan(request: ChatRequest, now: datetime | None = None) -> Execution
         steps.append(PlanStep(agent=AgentName.MEETING, intent=request.message))
     if any(signal in message for signal in web_signals):
         steps.append(PlanStep(agent=AgentName.WEB, intent=request.message))
+    if request.repository_id or any(signal in message for signal in code_signals):
+        steps.append(PlanStep(agent=AgentName.CODE, intent=request.message))
     if not steps:
+        conversational = (
+            "hello",
+            "hi ",
+            "hey",
+            "thanks",
+            "thank you",
+            "who are you",
+            "what can you do",
+            "wie heisst du",
+            "wie heißt du",
+            "namaste",
+        )
+        if any(signal in f"{message} " for signal in conversational):
+            steps.append(PlanStep(agent=AgentName.RESULT, intent=request.message))
+            return ExecutionPlan(
+                steps=steps,
+                reason="No enterprise retrieval was needed; Result can answer conversationally.",
+            )
         steps.append(PlanStep(agent=AgentName.DATA, intent=request.message))
 
     anomaly_requested = any(

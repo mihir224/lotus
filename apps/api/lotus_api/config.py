@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     embedding_location: str = "global"
     demo_mode: bool = True
     runtime_mode: str = "fixture"
+    embedding_runtime_mode: str = "fixture"
     store_backend: str = "memory"
     database_url: str = "postgresql+psycopg://lotus:lotus@localhost:5432/lotus"
     fixture_dir: Path = Path("demo_data")
@@ -22,12 +23,14 @@ class Settings(BaseSettings):
     embedding_model: str = "gemini-embedding-001"
     embedding_dimensions: int = 768
     agent_timeout_seconds: float = 45.0
+    web_agent_timeout_seconds: float = 90.0
     auth_mode: str = "dev"
     google_oauth_client_id: str | None = None
     allowed_google_emails: str = ""
     allowed_google_domains: str = ""
     agent_rate_limit_requests: int = 10
     agent_rate_limit_window_seconds: int = 300
+    telemetry_enabled: bool = False
 
     @property
     def google_email_allowlist(self) -> set[str]:
@@ -47,7 +50,7 @@ class Settings(BaseSettings):
 
     @property
     def active_embedding_model(self) -> str:
-        if self.runtime_mode in {"agent_platform", "vertex"}:
+        if self.embedding_runtime_mode in {"agent_platform", "vertex"}:
             return f"agent-platform:{self.embedding_model}:{self.embedding_dimensions}"
         return f"fixture:hash-v1:{self.embedding_dimensions}"
 

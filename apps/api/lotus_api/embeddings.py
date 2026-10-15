@@ -90,7 +90,7 @@ class AgentPlatformEmbedder:
 
 
 def build_embedder(settings: Settings) -> Embedder:
-    if settings.runtime_mode in {"agent_platform", "vertex"}:
+    if settings.embedding_runtime_mode in {"agent_platform", "vertex"}:
         return AgentPlatformEmbedder(settings)
     return DeterministicEmbedder(settings.embedding_dimensions)
 

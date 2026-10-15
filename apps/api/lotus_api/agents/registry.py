@@ -6,7 +6,7 @@ from google.adk.models.google_llm import Gemini
 from google.adk.tools import google_search
 
 from ..config import Settings
-from ..models import AuthContext, ChatRequest, ExecutionPlan
+from ..models import AuthContext, ChatRequest, ExecutionPlan, MeetingAnalysis
 from ..storage.base import KnowledgeStore
 
 
@@ -32,10 +32,13 @@ def build_planner_agent(settings: Settings) -> Agent:
         model=_model(settings, settings.router_model),
         timeout=settings.agent_timeout_seconds,
         instruction=(
-            "You are the Lotus Planner. Select one or more specialists from data, meeting, and "
+            "You are the Lotus Planner. Select one or more specialists from data, meeting, web, "
+            "and code. "
             "web. Use data for internal documents and similar-team work; meeting for calendar, "
             "transcript, decision, action-item, and historical-meeting questions; web only for "
-            "public internet research. For greetings, thanks, test messages, help, and questions "
+            "public internet research; code for repository implementation questions. For "
+            "greetings, "
+            "thanks, test messages, help, and questions "
             "about Lotus capabilities, select result as the only step; do not invoke a specialist. "
             "Independent specialists have no dependencies. Add anomaly after meeting only when "
             "the request asks for gaps, conflicts, anomalies, action items, or open questions. "
@@ -68,12 +71,28 @@ def build_web_agent(settings: Settings) -> Agent:
     return Agent(
         name="web_search_agent",
         model=_model(settings, settings.generation_model),
-        timeout=settings.agent_timeout_seconds,
+        timeout=settings.web_agent_timeout_seconds,
         instruction=(
             "Research the user's question on the public web using Google Search. Return a concise "
             "evidence brief with source titles and URLs. Distinguish sourced facts from inference."
         ),
         tools=[google_search],
+    )
+
+
+def build_meeting_analysis_agent(settings: Settings) -> Agent:
+    return Agent(
+        name="meeting_analysis_agent",
+        model=_model(settings, settings.generation_model),
+        timeout=settings.agent_timeout_seconds,
+        instruction=(
+            "Analyze only the supplied timestamped transcript. Produce a concise summary, "
+            "decisions, action items, and unresolved questions. Every decision must cite valid "
+            "segment IDs and timestamps from the input. Do not infer owners or dates. Leave "
+            "anomalies empty because deterministic policy checks run after extraction."
+        ),
+        output_schema=MeetingAnalysis,
+        output_key="meeting_analysis",
     )
 
 

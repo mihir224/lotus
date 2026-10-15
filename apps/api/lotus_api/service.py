@@ -10,6 +10,10 @@ def answer_chat(request: ChatRequest, auth: AuthContext) -> GroundedAnswer:
     return get_orchestrator().answer(request, auth)
 
 
+def stream_chat(request: ChatRequest, auth: AuthContext, emit) -> GroundedAnswer:
+    return get_orchestrator().answer(request, auth, emit)
+
+
 @lru_cache
 def get_orchestrator() -> OrchestrationService:
     return OrchestrationService(get_settings(), get_store())

@@ -44,7 +44,7 @@ using realistic fixtures plus optional live Google Agent Platform calls.
 
 ```bash
 uv run ruff check apps/api tests
-RUNTIME_MODE=fixture STORE_BACKEND=memory AUTH_MODE=dev uv run pytest -q
+RUNTIME_MODE=fixture EMBEDDING_RUNTIME_MODE=fixture STORE_BACKEND=memory AUTH_MODE=dev uv run pytest -q
 npm run test --prefix apps/web
 npm run build --prefix apps/web
 ```

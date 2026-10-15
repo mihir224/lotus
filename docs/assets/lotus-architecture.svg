@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="820" viewBox="0 0 1400 820">
+  <rect width="1400" height="820" fill="#f4f1e8"/>
+  <style>.t{font:600 22px Arial;fill:#183329}.s{font:16px Arial;fill:#53625a}.b{fill:#fffdf8;stroke:#87a896;stroke-width:2}.a{fill:#dcecdf;stroke:#397257;stroke-width:2}.l{stroke:#648575;stroke-width:3;fill:none;marker-end:url(#m)}</style>
+  <defs><marker id="m" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#648575"/></marker></defs>
+  <text x="60" y="62" class="t" font-size="32">Lotus enterprise agent architecture</text>
+  <rect x="60" y="120" rx="18" width="220" height="90" class="a"/><text x="108" y="160" class="t">React workspace</text><text x="95" y="188" class="s">Markdown · Evidence · Run</text>
+  <rect x="350" y="120" rx="18" width="230" height="90" class="b"/><text x="393" y="160" class="t">Cloud Run API</text><text x="405" y="188" class="s">FastAPI · SSE · Auth</text>
+  <rect x="650" y="120" rx="18" width="220" height="90" class="a"/><text x="694" y="160" class="t">ADK Planner</text><text x="693" y="188" class="s">validated execution plan</text>
+  <path d="M280 165H350" class="l"/><path d="M580 165H650" class="l"/>
+  <g><rect x="160" y="310" rx="16" width="190" height="80" class="b"/><text x="205" y="355" class="t">Data Agent</text><rect x="410" y="310" rx="16" width="190" height="80" class="b"/><text x="440" y="355" class="t">Meeting Agent</text><rect x="660" y="310" rx="16" width="190" height="80" class="b"/><text x="695" y="355" class="t">Web Agent</text><rect x="910" y="310" rx="16" width="190" height="80" class="b"/><text x="945" y="355" class="t">Code Agent</text></g>
+  <path d="M760 210L255 310" class="l"/><path d="M760 210L505 310" class="l"/><path d="M760 210L755 310" class="l"/><path d="M760 210L1005 310" class="l"/>
+  <rect x="515" y="500" rx="18" width="240" height="90" class="a"/><text x="574" y="540" class="t">Result Agent</text><text x="558" y="568" class="s">grounded final response</text>
+  <path d="M255 390L575 500" class="l"/><path d="M505 390L610 500" class="l"/><path d="M755 390L680 500" class="l"/><path d="M1005 390L720 500" class="l"/>
+  <rect x="1040" y="120" rx="18" width="280" height="90" class="b"/><text x="1088" y="160" class="t">Google Cloud Trace</text><text x="1082" y="188" class="s">metadata only · no content</text><path d="M580 145H1040" class="l"/>
+  <rect x="230" y="680" rx="16" width="300" height="70" class="b"/><text x="269" y="723" class="t">Fixture memory store</text><rect x="750" y="680" rx="16" width="340" height="70" class="b"/><text x="790" y="723" class="t">Future pgvector / Cloud SQL</text>
+  <path d="M515 590L390 680" class="l"/><path d="M755 590L900 680" class="l"/>
+</svg>

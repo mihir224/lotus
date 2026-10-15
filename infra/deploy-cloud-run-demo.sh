@@ -25,7 +25,11 @@ gcloud services enable \
   aiplatform.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
+  cloudtrace.googleapis.com \
+  logging.googleapis.com \
+  monitoring.googleapis.com \
   run.googleapis.com \
+  telemetry.googleapis.com \
   --project "$PROJECT_ID"
 
 SERVICE_ACCOUNT_EMAIL="${RUNTIME_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -41,6 +45,13 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --role="roles/aiplatform.user" \
   --condition=None >/dev/null
 
+for role in roles/telemetry.tracesWriter roles/logging.logWriter roles/monitoring.metricWriter; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+    --role="$role" \
+    --condition=None >/dev/null
+done
+
 BUILD_SERVICE_ACCOUNT_EMAIL="${BUILD_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com"
 if ! gcloud iam service-accounts describe "$BUILD_SERVICE_ACCOUNT_EMAIL" \
   --project "$PROJECT_ID" >/dev/null 2>&1; then
@@ -54,7 +65,7 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --role="roles/run.builder" \
   --condition=None >/dev/null
 
-ENV_VARS="^|^GOOGLE_CLOUD_PROJECT=${PROJECT_ID}|GOOGLE_CLOUD_LOCATION=global|EMBEDDING_LOCATION=global|GOOGLE_GENAI_USE_ENTERPRISE=true|GOOGLE_GENAI_USE_VERTEXAI=false|RUNTIME_MODE=agent_platform|STORE_BACKEND=memory|AUTH_MODE=google|GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}|ALLOWED_GOOGLE_EMAILS=${ALLOWED_GOOGLE_EMAILS:-}|ALLOWED_GOOGLE_DOMAINS=${ALLOWED_GOOGLE_DOMAINS:-}|AGENT_RATE_LIMIT_REQUESTS=${AGENT_RATE_LIMIT_REQUESTS:-10}|AGENT_RATE_LIMIT_WINDOW_SECONDS=${AGENT_RATE_LIMIT_WINDOW_SECONDS:-300}"
+ENV_VARS="^|^GOOGLE_CLOUD_PROJECT=${PROJECT_ID}|GOOGLE_CLOUD_LOCATION=global|EMBEDDING_LOCATION=global|GOOGLE_GENAI_USE_ENTERPRISE=true|GOOGLE_GENAI_USE_VERTEXAI=false|RUNTIME_MODE=agent_platform|EMBEDDING_RUNTIME_MODE=fixture|STORE_BACKEND=memory|AUTH_MODE=google|GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}|ALLOWED_GOOGLE_EMAILS=${ALLOWED_GOOGLE_EMAILS:-}|ALLOWED_GOOGLE_DOMAINS=${ALLOWED_GOOGLE_DOMAINS:-}|AGENT_RATE_LIMIT_REQUESTS=${AGENT_RATE_LIMIT_REQUESTS:-10}|AGENT_RATE_LIMIT_WINDOW_SECONDS=${AGENT_RATE_LIMIT_WINDOW_SECONDS:-300}|TELEMETRY_ENABLED=true|ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false|OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=NO_CONTENT|OTEL_SERVICE_NAME=lotus-api|OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental"
 
 gcloud run deploy "$SERVICE_NAME" \
   --source=. \

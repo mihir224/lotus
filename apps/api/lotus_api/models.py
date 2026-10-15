@@ -22,6 +22,7 @@ class AgentName(StrEnum):
     MEETING = "meeting"
     WEB = "web"
     ANOMALY = "anomaly"
+    CODE = "code"
     RESULT = "result"
 
 
@@ -49,6 +50,9 @@ class ChatRequest(StrictModel):
     project_id: str = Field(min_length=1, max_length=128)
     meeting_id: str | None = None
     repository_id: str | None = None
+    session_id: str | None = Field(default=None, max_length=128)
+    planning_item_ids: list[str] = Field(default_factory=list, max_length=20)
+    document_ids: list[str] = Field(default_factory=list, max_length=20)
 
 
 class Scope(StrictModel):
@@ -110,6 +114,7 @@ class SpecialistResult(StrictModel):
 
 
 class GroundedAnswer(StrictModel):
+    execution_id: str
     answer: str
     evidence: list[Evidence]
     scope: Scope
@@ -153,6 +158,7 @@ class ActionItem(StrictModel):
     owner: str | None = None
     due_date: str | None = None
     timestamp_ms: int | None = None
+    evidence_segment_ids: list[str] = Field(default_factory=list)
 
 
 class Anomaly(StrictModel):
@@ -175,11 +181,19 @@ class MeetingAnalysis(StrictModel):
     anomalies: list[Anomaly] = Field(default_factory=list)
 
 
+class MeetingAnalysisMetadata(StrictModel):
+    method: Literal["fixture", "agent_platform", "fallback"]
+    model: str
+    input_hash: str
+    generated_at: datetime
+
+
 class MeetingRecord(StrictModel):
     meeting_id: str
     tenant_id: str
     transcript: MeetingTranscriptInput
     analysis: MeetingAnalysis | None = None
+    analysis_metadata: MeetingAnalysisMetadata | None = None
     status: Literal["received", "processed", "failed"] = "received"
     updated_at: datetime
 
@@ -209,3 +223,30 @@ class CalendarEventItem(StrictModel):
     ended_at: datetime
     canceled: bool = False
     recurring: bool = False
+
+
+class RunEvent(StrictModel):
+    event_type: Literal[
+        "run.started",
+        "node.started",
+        "node.completed",
+        "node.failed",
+        "answer.delta",
+        "answer.completed",
+        "run.failed",
+        "heartbeat",
+    ]
+    execution_id: str
+    session_id: str | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now().astimezone())
+    node_id: str | None = None
+    parent_id: str | None = None
+    node_kind: Literal["agent", "tool"] | None = None
+    label: str | None = None
+    status: Literal["pending", "running", "completed", "failed"] | None = None
+    duration_ms: float | None = None
+    input_preview: dict[str, Any] | None = None
+    output_preview: dict[str, Any] | None = None
+    answer_delta: str | None = None
+    response: GroundedAnswer | None = None
+    error: str | None = None

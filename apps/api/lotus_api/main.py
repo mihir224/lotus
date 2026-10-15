@@ -1,4 +1,6 @@
 import logging
+import queue
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -9,6 +11,7 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auth import get_auth_context
@@ -25,10 +28,12 @@ from .models import (
     MeetingListItem,
     MeetingRecord,
     MeetingTranscriptInput,
+    RunEvent,
 )
 from .rate_limit import FixedWindowRateLimiter
-from .service import answer_chat
+from .service import answer_chat, stream_chat
 from .storage import get_store
+from .telemetry import configure_telemetry
 
 settings = get_settings()
 logger = logging.getLogger("uvicorn.error.lotus")
@@ -40,6 +45,7 @@ agent_rate_limiter = FixedWindowRateLimiter(
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    configure_telemetry(settings)
     logger.info(
         "lotus.startup runtime=%s store=%s location=%s model=%s embedding_model=%s",
         settings.runtime_mode,
@@ -142,6 +148,52 @@ def chat(
             headers={"Retry-After": str(retry_after)},
         )
     return answer_chat(request, auth)
+
+
+@app.post("/v1/chat/stream")
+def chat_stream(
+    request: ChatRequest,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+) -> StreamingResponse:
+    retry_after = agent_rate_limiter.check(f"{auth.tenant_id}:{auth.user_id}")
+    if retry_after is not None:
+        raise HTTPException(
+            status_code=429,
+            detail="Agent request limit reached; try again shortly",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    events: queue.Queue[RunEvent | None] = queue.Queue()
+
+    def worker() -> None:
+        try:
+            stream_chat(request, auth, events.put)
+        finally:
+            events.put(None)
+
+    threading.Thread(target=worker, name="lotus-chat-stream", daemon=True).start()
+
+    def generate():
+        while True:
+            try:
+                item = events.get(timeout=15)
+            except queue.Empty:
+                yield "event: heartbeat\ndata: {}\n\n"
+                continue
+            if item is None:
+                break
+            payload = item.model_dump_json()
+            yield f"event: {item.event_type}\ndata: {payload}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.post("/v1/meetings/{meeting_id}/process", response_model=MeetingRecord)

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   authHeaders,
   type AuthConfig,
@@ -9,6 +9,11 @@ import {
 } from "./auth";
 import { CalendarView } from "./CalendarView";
 import type { GroundedAnswer } from "./types";
+import type { RunEvent } from "./types";
+import { ChatComposer } from "./ChatComposer";
+import { MarkdownMessage } from "./MarkdownMessage";
+import { RunInspector } from "./RunInspector";
+import { streamChat } from "./chatStream";
 
 type WorkspaceTab = "planner" | "specialists" | "result" | "calendar";
 
@@ -30,10 +35,25 @@ export function App() {
   const [session, setSession] = useState<AuthSession | null>(storedAuthSession);
   const [authConfigError, setAuthConfigError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("planner");
-  const [message, setMessage] = useState(suggestions[0]);
+  const [message, setMessage] = useState("");
+  const [submittedMessage, setSubmittedMessage] = useState("");
   const [answer, setAnswer] = useState<GroundedAnswer | null>(null);
+  const [streamedAnswer, setStreamedAnswer] = useState("");
+  const [runEvents, setRunEvents] = useState<RunEvent[]>([]);
+  const runEventsRef = useRef<RunEvent[]>([]);
+  const [drawerTab, setDrawerTab] = useState<"evidence" | "run">("evidence");
+  const [feedback, setFeedback] = useState<"like" | "dislike" | null>(null);
+  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const controllerRef = useRef<AbortController | null>(null);
+  const [chatSessionId] = useState(() => {
+    const existing = sessionStorage.getItem("lotus.session_id");
+    if (existing) return existing;
+    const created = crypto.randomUUID();
+    sessionStorage.setItem("lotus.session_id", created);
+    return created;
+  });
 
   useEffect(() => {
     fetch("/v1/auth/config")
@@ -59,23 +79,58 @@ export function App() {
     return <GoogleLogin clientId={authConfig.google_client_id} onAuthenticated={setSession} />;
   }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function submit() {
     if (!message.trim() || loading) return;
+    const prompt = message.trim();
+    setSubmittedMessage(prompt);
+    setMessage("");
     setLoading(true);
     setError(null);
+    setAnswer(null);
+    setStreamedAnswer("");
+    setRunEvents([]);
+    setFeedback(null);
+    setCopied(false);
+    runEventsRef.current = [];
+    setDrawerTab("run");
+    const controller = new AbortController();
+    controllerRef.current = controller;
     try {
-      const response = await fetch("/v1/chat/messages", {
-        method: "POST",
-        headers: authHeaders(true),
-        body: JSON.stringify({ message, project_id: "payments" })
-      });
-      if (!response.ok) throw new Error(`Request failed with ${response.status}`);
-      setAnswer((await response.json()) as GroundedAnswer);
+      await streamChat(
+        { message: prompt, project_id: "payments", session_id: chatSessionId },
+        authHeaders(true),
+        (event) => {
+          setRunEvents((previous) => {
+            const next = [...previous, event].slice(-500);
+            runEventsRef.current = next;
+            sessionStorage.setItem("lotus.latest_run", JSON.stringify(next));
+            return next;
+          });
+          if (event.event_type === "answer.delta" && event.answer_delta) {
+            setStreamedAnswer((previous) => previous + event.answer_delta);
+          }
+          if (event.event_type === "answer.completed" && event.response) {
+            setAnswer(event.response);
+            setDrawerTab("evidence");
+            const stored = JSON.parse(sessionStorage.getItem("lotus.completed_runs") ?? "[]") as RunEvent[][];
+            sessionStorage.setItem(
+              "lotus.completed_runs",
+              JSON.stringify([...stored, runEventsRef.current].slice(-10))
+            );
+          }
+          if (event.event_type === "run.failed") throw new Error("The Lotus run failed.");
+        },
+        controller.signal
+      );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to reach Lotus API");
+      if (reason instanceof DOMException && reason.name === "AbortError") {
+        setError("Run cancelled.");
+      } else {
+        setError(reason instanceof Error ? reason.message : "Unable to reach Lotus API");
+      }
     } finally {
       setLoading(false);
+      controllerRef.current = null;
     }
   }
 
@@ -151,44 +206,85 @@ export function App() {
                 ))}
               </div>
 
-              {answer && (
+              {submittedMessage && <p className="last-prompt">{submittedMessage}</p>}
+
+              {(answer || streamedAnswer) && (
                 <article className="answer-card">
-                  <div className="answer-head">
-                    <span className="route-chip">{answer.route.route}</span>
-                    <span>{answer.agents_used.join(" → ")}</span>
-                    <span>{answer.route.live_retrieval ? "Live web retrieval" : "Indexed retrieval"}</span>
-                  </div>
-                  <h2>Answer</h2>
-                  <p>{answer.answer}</p>
-                  {answer.uncertainty.length > 0 && (
-                    <div className="uncertainty"><strong>Uncertainty</strong>{answer.uncertainty.join(" ")}</div>
+                  <MarkdownMessage>{answer?.answer ?? streamedAnswer}</MarkdownMessage>
+                  {answer && (
+                    <div className="response-actions" aria-label="Response actions">
+                      <button
+                        type="button"
+                        className={feedback === "like" ? "active" : ""}
+                        aria-label="Like response"
+                        title="Like"
+                        onClick={() => setFeedback(feedback === "like" ? null : "like")}
+                      >
+                        <span aria-hidden="true">👍</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={feedback === "dislike" ? "active" : ""}
+                        aria-label="Dislike response"
+                        title="Dislike"
+                        onClick={() => setFeedback(feedback === "dislike" ? null : "dislike")}
+                      >
+                        <span aria-hidden="true">👎</span>
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Copy response"
+                        title="Copy"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(answer.answer);
+                            setCopied(true);
+                            window.setTimeout(() => setCopied(false), 1600);
+                          } catch {
+                            setError("Unable to copy the response.");
+                          }
+                        }}
+                      >
+                        <span aria-hidden="true">{copied ? "✓" : "⧉"}</span>
+                        <span>{copied ? "Copied" : "Copy"}</span>
+                      </button>
+                    </div>
                   )}
                 </article>
               )}
 
               {error && <div className="error">{error}</div>}
 
-              <form className="composer" onSubmit={submit}>
-                <textarea
-                  aria-label="Ask Lotus"
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  rows={3}
-                />
-                <div>
-                  <span>Planner selects the right agents automatically</span>
-                  <button type="submit" disabled={loading}>{loading ? "Checking sources…" : "Ask Lotus"}</button>
+              {loading && (
+                <div className="progress-line" role="status" aria-live="polite">
+                  <strong>Thinking</strong>
+                  <span className="typing-dots" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
                 </div>
-              </form>
+              )}
+              <ChatComposer
+                value={message}
+                loading={loading}
+                onChange={setMessage}
+                onSubmit={submit}
+                onCancel={() => controllerRef.current?.abort()}
+              />
             </>
           )}
         </section>
 
         <aside className="evidence" aria-label="Evidence drawer">
           <div className="drawer-head">
-            <div><p className="eyebrow">Evidence</p><h2>Source trail</h2></div>
-            <span>{answer?.evidence.length ?? 0}</span>
+            <div className="drawer-tabs">
+              <button className={drawerTab === "evidence" ? "active" : ""} onClick={() => setDrawerTab("evidence")}>Evidence</button>
+              <button className={drawerTab === "run" ? "active" : ""} onClick={() => setDrawerTab("run")}>Run</button>
+            </div>
+            <span>{drawerTab === "evidence" ? answer?.evidence.length ?? 0 : runEvents.filter((item) => item.node_id).length}</span>
           </div>
+          {drawerTab === "run" ? <RunInspector events={runEvents} /> : <>
           {!answer && <p className="empty">Sources used for an answer will appear here with scope and provenance.</p>}
           {answer?.evidence.map((item, index) => (
             <article className="source" key={`${item.source_id}-${index}`}>
@@ -197,7 +293,7 @@ export function App() {
               <p>{item.snippet}</p>
               <footer><strong>{item.source_type}</strong><span>{item.source_id}</span></footer>
             </article>
-          ))}
+          ))}</>}
         </aside>
       </section>
     </main>

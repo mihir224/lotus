@@ -52,6 +52,7 @@ export type MeetingRecord = {
 };
 
 export type GroundedAnswer = {
+  execution_id: string;
   answer: string;
   evidence: Evidence[];
   scope: {
@@ -76,4 +77,23 @@ export type GroundedAnswer = {
     date_to: string | null;
   } | null;
   artifacts: { artifact_type: string; title: string; content: string | object }[];
+};
+
+export type RunEvent = {
+  event_type: "run.started" | "node.started" | "node.completed" | "node.failed" |
+    "answer.delta" | "answer.completed" | "run.failed" | "heartbeat";
+  execution_id: string;
+  session_id: string | null;
+  timestamp: string;
+  node_id: string | null;
+  parent_id: string | null;
+  node_kind: "agent" | "tool" | null;
+  label: string | null;
+  status: "pending" | "running" | "completed" | "failed" | null;
+  duration_ms: number | null;
+  input_preview: Record<string, unknown> | null;
+  output_preview: Record<string, unknown> | null;
+  answer_delta: string | null;
+  response: GroundedAnswer | null;
+  error: string | null;
 };
