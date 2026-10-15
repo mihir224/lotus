@@ -4,7 +4,7 @@ import { AppRail } from "./components/navigation/AppRail";
 import type { AppSection } from "./components/navigation/types";
 import { AIWorkspace } from "./components/workspace/AIWorkspace";
 import { EvidenceDrawer } from "./components/workspace/EvidenceDrawer";
-import { PlaceholderView } from "./components/workspace/PlaceholderView";
+import { DocsView } from "./components/docs/DocsView";
 import { WorkBoardView } from "./components/work-board/WorkBoardView";
 import {
   authHeaders,
@@ -14,6 +14,9 @@ import {
   signOut,
   storedAuthSession
 } from "./auth";
+import { ProfileAvatar } from "./components/profile/ProfileAvatar";
+import { ProfilePanel } from "./components/profile/ProfilePanel";
+import { useUserProfile } from "./components/profile/useUserProfile";
 import type { GroundedAnswer } from "./types";
 
 const suggestions = [
@@ -31,6 +34,8 @@ export function App() {
   const [answer, setAnswer] = useState<GroundedAnswer | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { profile } = useUserProfile(session, authConfig?.mode ?? "dev");
 
   useEffect(() => {
     fetch("/v1/auth/config")
@@ -81,7 +86,7 @@ export function App() {
       case "work-board":
         return <WorkBoardView />;
       case "docs":
-        return <PlaceholderView title="Welcome to Docs" />;
+        return <DocsView />;
       case "calendar":
         return <CalendarView today={new Date()} />;
       case "chat":
@@ -110,30 +115,32 @@ export function App() {
             <span>Enterprise workspace</span>
           </div>
         </div>
-        <div className="context">
-          <span>Project</span>
-          <strong>Payments</strong>
-          <i />
-          <span>Environment</span>
-          <strong>Fixture demo</strong>
-          {session && (
-            <>
-              <i />
-              <strong>{session.name ?? session.email}</strong>
-              <button
-                type="button"
-                className="signout-btn"
-                onClick={() => {
-                  signOut();
-                  setSession(null);
-                }}
-              >
-                Sign out
-              </button>
-            </>
-          )}
-        </div>
+        {profile && (
+          <button
+            type="button"
+            className="profile-topbar-btn"
+            aria-label="Open profile"
+            aria-expanded={profileOpen}
+            onClick={() => setProfileOpen(true)}
+          >
+            <ProfileAvatar profile={profile} size={40} />
+          </button>
+        )}
       </header>
+
+      {profile && (
+        <ProfilePanel
+          open={profileOpen}
+          profile={profile}
+          onClose={() => setProfileOpen(false)}
+          showSignOut={authConfig.mode === "google" && Boolean(session)}
+          onSignOut={() => {
+            signOut();
+            setSession(null);
+            setProfileOpen(false);
+          }}
+        />
+      )}
 
       <section className={`workspace${activeSection === "chat" ? "" : " workspace-two-col"}`}>
         <AppRail activeSection={activeSection} onSelect={setActiveSection} />
@@ -144,7 +151,9 @@ export function App() {
               ? " conversation-calendar"
               : activeSection === "work-board"
                 ? " conversation-board"
-                : ""
+                : activeSection === "docs"
+                  ? " conversation-docs"
+                  : ""
           }`}
         >
           {renderMainContent()}

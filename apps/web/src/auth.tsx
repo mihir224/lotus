@@ -10,6 +10,8 @@ export interface AuthSession {
   user_id: string;
   email: string | null;
   name: string | null;
+  designation?: string | null;
+  picture_url?: string | null;
 }
 
 interface GoogleCredentialResponse {

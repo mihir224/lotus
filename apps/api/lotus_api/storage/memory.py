@@ -395,3 +395,33 @@ class MemoryKnowledgeStore:
         updated = current.model_copy(update=filtered)
         row["item"] = updated
         return updated
+
+    def list_knowledge_document_chunks(
+        self,
+        auth: AuthContext,
+        project_id: str,
+    ) -> list[dict]:
+        rows: list[dict] = []
+        for row in self.documents.values():
+            if not _allowed(row, auth, project_id):
+                continue
+            if row.get("embedding_model") != self.embedder.model_id:
+                continue
+            rows.append(dict(row))
+        return rows
+
+    def upsert_knowledge_document_chunk(
+        self,
+        auth: AuthContext,
+        payload: dict,
+    ) -> dict:
+        row = dict(payload)
+        text = row["chunk_text"]
+        row["embedding_model"] = self.embedder.model_id
+        row["embedding"] = self.embedder.embed_documents([text])[0]
+        row["content_hash"] = hashlib.sha256(text.encode()).hexdigest()
+        if "metadata" in row:
+            row.setdefault("metadata_json", row.pop("metadata"))
+        row["acl_principals"] = list(row.get("acl_principals") or auth.principals)
+        self.documents[row["chunk_id"]] = row
+        return row

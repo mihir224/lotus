@@ -94,3 +94,15 @@ class KnowledgeStore(Protocol):
         item: BoardIssueItem,
         acl_principals: list[str] | None = None,
     ) -> BoardIssueItem: ...
+
+    def list_knowledge_document_chunks(
+        self,
+        auth: AuthContext,
+        project_id: str,
+    ) -> list[dict]: ...
+
+    def upsert_knowledge_document_chunk(
+        self,
+        auth: AuthContext,
+        payload: dict,
+    ) -> dict: ...

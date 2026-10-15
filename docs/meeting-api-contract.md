@@ -25,6 +25,12 @@ All calls may send `X-Lotus-Tenant` and `X-Lotus-User`. The process body contain
   `assignee_id` / `reporter_id` of `unassigned` when not set.
 - `PATCH /v1/work-board/issues/{issue_key}` updates title, type, status, or assignee; changes
   persist in the KnowledgeStore.
+- `GET /v1/docs/catalog?project_id=payments` lists document pages grouped by team (aggregated from
+  `document_embeddings`, seeded from `demo_data/enterprise/documents.json`).
+- `GET /v1/docs/search?project_id=payments&q=...` keyword-search titles and bodies.
+- `GET /v1/docs/sources/{source_id}?project_id=payments` returns a full page (combined chunks).
+- `POST /v1/docs/sources` creates a Lotus-authored page in the KnowledgeStore only (not the fixture
+  file); it is embedded for chat retrieval with `source_system: lotus`.
 
 Chat requests contain only `message`, `project_id`, and optional meeting/repository context.
 There is no mode field: the Planner Agent selects Data, Meeting, Web, and Anomaly work,

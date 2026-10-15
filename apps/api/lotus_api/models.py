@@ -31,6 +31,8 @@ class AuthContext(StrictModel):
     principals: tuple[str, ...]
     email: str | None = None
     name: str | None = None
+    designation: str | None = None
+    picture_url: str | None = None
 
 
 class AuthConfig(StrictModel):
@@ -42,6 +44,8 @@ class AuthenticatedUser(StrictModel):
     user_id: str
     email: str | None = None
     name: str | None = None
+    designation: str | None = None
+    picture_url: str | None = None
 
 
 class ChatRequest(StrictModel):
@@ -305,3 +309,64 @@ class WorkBoardResponse(StrictModel):
     teams: list[BoardTeam]
     assignees: list[BoardAssignee]
     issues: list[BoardIssueItem]
+
+
+DocSourceType = Literal[
+    "architecture",
+    "runbook",
+    "product",
+    "adr",
+    "policy",
+    "issue",
+    "product_doc",
+    "release_note",
+    "guide",
+]
+
+
+class DocSourceSummary(StrictModel):
+    source_id: str
+    title: str
+    team: str
+    source_type: str
+    source_system: str
+    updated_at: str | None = None
+
+
+class DocTeamGroup(StrictModel):
+    team: str
+    pages: list[DocSourceSummary]
+
+
+class DocCatalogResponse(StrictModel):
+    project_id: str
+    groups: list[DocTeamGroup]
+
+
+class DocPageDetail(StrictModel):
+    source_id: str
+    project_id: str
+    title: str
+    team: str
+    source_type: str
+    source_system: str
+    source_uri: str | None = None
+    body: str
+    updated_at: str | None = None
+
+
+class DocSearchHit(StrictModel):
+    source_id: str
+    title: str
+    team: str
+    source_type: str
+    snippet: str
+    updated_at: str | None = None
+
+
+class DocSourceCreate(StrictModel):
+    project_id: str = Field(min_length=1, max_length=128)
+    title: str = Field(min_length=1, max_length=240)
+    team: str = Field(min_length=1, max_length=120)
+    source_type: DocSourceType = "guide"
+    body: str = Field(min_length=1, max_length=50_000)

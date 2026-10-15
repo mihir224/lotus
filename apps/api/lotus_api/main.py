@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .auth import get_auth_context
 from .calendar import create_calendar_event, list_calendar_events
+from .docs import create_doc_source, get_doc_page, get_docs_catalog, search_docs
 from .config import get_settings
 from .meetings import process_meeting, summarize_meeting
 from .models import (
@@ -25,6 +26,10 @@ from .models import (
     CalendarEventCreate,
     CalendarEventItem,
     ChatRequest,
+    DocCatalogResponse,
+    DocPageDetail,
+    DocSearchHit,
+    DocSourceCreate,
     GroundedAnswer,
     MeetingListItem,
     MeetingRecord,
@@ -122,7 +127,13 @@ def auth_config() -> AuthConfig:
 def authenticated_user(
     auth: Annotated[AuthContext, Depends(get_auth_context)],
 ) -> AuthenticatedUser:
-    return AuthenticatedUser(user_id=auth.user_id, email=auth.email, name=auth.name)
+    return AuthenticatedUser(
+        user_id=auth.user_id,
+        email=auth.email,
+        name=auth.name,
+        designation=auth.designation,
+        picture_url=auth.picture_url,
+    )
 
 
 @app.get("/v1/readyz")
@@ -238,6 +249,46 @@ def patch_work_board_issue_endpoint(
         return patch_board_issue(get_store(), issue_key, auth, payload)
     except LookupError:
         raise HTTPException(status_code=404, detail="Issue not found") from None
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/v1/docs/catalog", response_model=DocCatalogResponse)
+def docs_catalog_endpoint(
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+    project_id: str = "payments",
+) -> DocCatalogResponse:
+    return get_docs_catalog(get_store(), auth, project_id)
+
+
+@app.get("/v1/docs/search", response_model=list[DocSearchHit])
+def docs_search_endpoint(
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+    q: str,
+    project_id: str = "payments",
+) -> list[DocSearchHit]:
+    return search_docs(get_store(), auth, project_id, q)
+
+
+@app.get("/v1/docs/sources/{source_id}", response_model=DocPageDetail)
+def docs_page_endpoint(
+    source_id: str,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+    project_id: str = "payments",
+) -> DocPageDetail:
+    try:
+        return get_doc_page(get_store(), auth, project_id, source_id)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Document not found") from None
+
+
+@app.post("/v1/docs/sources", response_model=DocPageDetail)
+def docs_create_endpoint(
+    payload: DocSourceCreate,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+) -> DocPageDetail:
+    try:
+        return create_doc_source(get_store(), auth, payload)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 

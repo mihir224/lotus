@@ -12,6 +12,7 @@ def _google_auth_context(claims: dict[str, Any], settings: Settings) -> AuthCont
     subject = str(claims.get("sub", "")).strip()
     email = str(claims.get("email", "")).strip().casefold()
     name = str(claims.get("name", "")).strip() or None
+    picture = str(claims.get("picture", "")).strip() or None
     if not subject or not email or claims.get("email_verified") is not True:
         raise HTTPException(status_code=401, detail="Google account email is not verified")
 
@@ -28,6 +29,8 @@ def _google_auth_context(claims: dict[str, Any], settings: Settings) -> AuthCont
         user_id=subject,
         email=email,
         name=name,
+        designation=None,
+        picture_url=picture,
         principals=(
             f"user:{subject}",
             f"email:{email}",
@@ -75,5 +78,9 @@ def get_auth_context(
     return AuthContext(
         tenant_id=tenant_id.strip(),
         user_id=user_id.strip(),
+        email="demo.engineer@lotus.example",
+        name="Demo Engineer",
+        designation="Platform Engineer",
+        picture_url=None,
         principals=(f"user:{user_id.strip()}", "group:demo"),
     )

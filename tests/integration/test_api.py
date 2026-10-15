@@ -129,6 +129,51 @@ def test_work_board_lists_and_updates_issue() -> None:
     assert match["status"] == "development"
 
 
+def test_docs_catalog_search_and_create() -> None:
+    catalog = client.get("/v1/docs/catalog", params={"project_id": "payments"})
+    assert catalog.status_code == 200
+    groups = catalog.json()["groups"]
+    assert len(groups) >= 1
+    total_pages = sum(len(group["pages"]) for group in groups)
+    assert total_pages >= 10
+
+    search = client.get(
+        "/v1/docs/search",
+        params={"project_id": "payments", "q": "retry"},
+    )
+    assert search.status_code == 200
+    assert len(search.json()) >= 1
+
+    detail = client.get(
+        "/v1/docs/sources/ADR-017",
+        params={"project_id": "payments"},
+    )
+    assert detail.status_code == 200
+    assert "jitter" in detail.json()["body"].casefold()
+
+    created = client.post(
+        "/v1/docs/sources",
+        json={
+            "project_id": "payments",
+            "title": "Lotus onboarding note",
+            "team": "Platform",
+            "source_type": "guide",
+            "body": "New hires should read the checkout runbooks first.",
+        },
+    )
+    assert created.status_code == 200
+    source_id = created.json()["source_id"]
+    assert source_id.startswith("LOTUS-")
+
+    again = client.get("/v1/docs/catalog", params={"project_id": "payments"})
+    ids = {
+        page["source_id"]
+        for group in again.json()["groups"]
+        for page in group["pages"]
+    }
+    assert source_id in ids
+
+
 def test_create_work_board_issue() -> None:
     created = client.post(
         "/v1/work-board/issues",

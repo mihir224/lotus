@@ -573,3 +573,72 @@ class PostgresKnowledgeStore:
             row.updated_at = datetime.now(UTC)
             session.commit()
             return self._board_row_to_item(row)
+
+    @staticmethod
+    def _document_row_to_dict(row: DocumentEmbeddingRow) -> dict:
+        return {
+            "chunk_id": row.chunk_id,
+            "tenant_id": row.tenant_id,
+            "project_id": row.project_id,
+            "team": row.team,
+            "source_system": row.source_system,
+            "source_type": row.source_type,
+            "source_id": row.source_id,
+            "source_uri": row.source_uri,
+            "title": row.title,
+            "section_path": row.section_path,
+            "chunk_text": row.chunk_text,
+            "acl_principals": list(row.acl_principals),
+            "metadata_json": dict(row.metadata_json or {}),
+            "source_version": row.source_version,
+            "source_updated_at": row.source_updated_at,
+            "embedding_model": row.embedding_model,
+        }
+
+    def list_knowledge_document_chunks(
+        self,
+        auth: AuthContext,
+        project_id: str,
+    ) -> list[dict]:
+        statement = select(DocumentEmbeddingRow).where(
+            DocumentEmbeddingRow.tenant_id == auth.tenant_id,
+            DocumentEmbeddingRow.project_id == project_id,
+            DocumentEmbeddingRow.acl_principals.op("&&")(list(auth.principals)),
+            DocumentEmbeddingRow.embedding_model == self.embedder.model_id,
+        )
+        with Session(self.engine) as session:
+            rows = session.scalars(statement).all()
+        return [self._document_row_to_dict(row) for row in rows]
+
+    def upsert_knowledge_document_chunk(
+        self,
+        auth: AuthContext,
+        payload: dict,
+    ) -> dict:
+        text = payload["chunk_text"]
+        vector = self.embedder.embed_documents([text])[0]
+        values = {
+            **payload,
+            "metadata_json": payload.get("metadata") or payload.get("metadata_json") or {},
+            "content_hash": hashlib.sha256(text.encode()).hexdigest(),
+            "embedding_model": self.embedder.model_id,
+            "embedding": vector,
+        }
+        values.pop("metadata", None)
+        with Session(self.engine) as session:
+            row = session.scalar(
+                select(DocumentEmbeddingRow).where(
+                    DocumentEmbeddingRow.tenant_id == auth.tenant_id,
+                    DocumentEmbeddingRow.chunk_id == payload["chunk_id"],
+                    DocumentEmbeddingRow.embedding_model == self.embedder.model_id,
+                )
+            )
+            if row is None:
+                row = DocumentEmbeddingRow(**values)
+                session.add(row)
+            else:
+                for key, value in values.items():
+                    setattr(row, key, value)
+            session.commit()
+            session.refresh(row)
+            return self._document_row_to_dict(row)
