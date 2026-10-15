@@ -1,55 +1,71 @@
 # Lotus deployment agent context
 
-## Current state
+## Current architecture
 
-The repository has a production multi-stage `Dockerfile` and
-`infra/deploy-cloud-run-demo.sh`. Cloud Run service `lotus` is deployed in `asia-south1` at
-`https://lotus-6n3idqotvq-el.a.run.app`; revision `lotus-00001-8pp` initially received 100% of
-traffic. Public health, readiness, auth-configuration, and SPA smoke tests passed on 2026-10-15.
-The deployed demo uses the in-memory fixture store and live Agent Platform runtime. Google login
-will not work until the exact Cloud Run origin is added to the OAuth client's Authorized JavaScript
-origins. There is no Cloud SQL instance, migration job, or Terraform configuration yet.
+Lotus runs in GCP project `ai-builder-hackthon-vys`, region `asia-south1`. One authenticated Cloud
+Run service hosts the compiled React workspace and FastAPI/Google ADK backend. Agent generation
+uses Agent Platform. Persistent workspace state and both vector indexes live in Cloud SQL
+PostgreSQL with pgvector. Query embeddings use the deterministic local 768-dimensional
+`fixture:hash-v1:768` implementation.
 
-## Target architecture
+The image still contains `demo_data`, but only the Cloud Run seed job reads those files. The API
+does not load fixture rows at startup and never falls back to memory if PostgreSQL is unavailable.
 
-Use GCP project `ai-builder-hackthon-vys`:
+## GCP resources
 
-```text
-Browser → public Cloud Run service → FastAPI/ADK → Agent Platform
-                                  └→ Cloud SQL PostgreSQL + pgvector
+- Cloud Run service: `lotus`, minimum instances `0`, maximum instances `1`, request timeout 600s
+- Cloud SQL instance: `lotus-postgres`, PostgreSQL 16, single-zone `db-f1-micro`, 10 GB SSD
+- Database/user: `lotus` / `lotus_app`
+- Secret Manager secret: `lotus-db-password`
+- Runtime service account: `lotus-runtime`
+- Artifact Registry repository: `lotus`
+- Cloud Run jobs: `lotus-migrate` and `lotus-seed`
+
+The hackathon database has no HA, read replicas, automated backups, or point-in-time recovery.
+Cloud SQL incurs continuous cost even when Cloud Run scales to zero.
+
+## Provision and deploy
+
+`infra/provision-cloud-sql.sh` is idempotent. It enables the required APIs, creates the minimum
+database configuration, generates the application password once, stores it in Secret Manager, and
+grants the runtime identity only Cloud SQL client and secret access.
+
+`infra/deploy-cloud-run-demo.sh` builds one git-SHA-tagged image and uses it for migration, seed,
+and service deployment. It deploys a no-traffic candidate, checks health and PostgreSQL readiness,
+then sends 100% of traffic to that candidate. Export the public OAuth client ID and allowlist before
+running it; never export or handle the database password manually.
+
+```bash
+export GOOGLE_OAUTH_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+export ALLOWED_GOOGLE_EMAILS="alice@example.com,bob@example.com"
+./infra/deploy-cloud-run-demo.sh
 ```
 
-For the hackathon, build React and FastAPI into one container and serve one same-origin HTTPS site.
-Cloud Run must listen on `$PORT`. Use `asia-south1` for Cloud Run and Cloud SQL unless the user
-chooses another region; keep Agent Platform and embeddings on their configured `global` endpoint.
+To roll back application traffic, list revisions and route traffic to the prior revision. Database
+migrations must remain additive so the prior service remains compatible:
 
-## Required deployment work
+```bash
+gcloud run revisions list --service=lotus --region=asia-south1
+gcloud run services update-traffic lotus --region=asia-south1 --to-revisions=PREVIOUS_REVISION=100
+```
 
-1. Add `https://lotus-6n3idqotvq-el.a.run.app` to the OAuth Web client's authorized JavaScript
-   origins and run an authenticated browser smoke test.
-2. Confirm Cloud SQL's continuous cost before provisioning it.
-3. Provision Cloud SQL PostgreSQL, enable `vector`, run Alembic, and seed the active live model.
-4. Store the database credential in Secret Manager; attach Cloud SQL through the Cloud Run service.
-5. Extend the dedicated runtime service account with least-privilege Cloud SQL and secret access.
-   secret access. Use service identity/ADC—never ship a service-account key.
-6. Switch the deployed service from `STORE_BACKEND=memory` to `STORE_BACKEND=postgres`.
-7. Start with `max-instances=1`, conservative concurrency, and the application rate limiter.
-8. Add the exact Cloud Run HTTPS origin to the OAuth Web client and run authenticated smoke tests.
+## Cleanup
 
-## Security and cost rules
+Cleanup is intentionally explicit because it destroys persistent data. Take any required export
+before deleting the instance.
 
-The Cloud Run URL must be public so unauthenticated browsers can load the login page. Application
-APIs enforce Google authentication and allowlisting. The current limiter is per instance; before
-scaling past one instance, move rate-limit state to a shared store. Add billing budgets and alerts,
-but do not claim they are hard spending caps. Cloud SQL is normally continuously billed; confirm
-cost acceptance before provisioning it.
+```bash
+gcloud run jobs delete lotus-seed --region=asia-south1
+gcloud run jobs delete lotus-migrate --region=asia-south1
+gcloud sql instances delete lotus-postgres
+gcloud secrets delete lotus-db-password
+```
 
-Google Auth Platform branding, audience/test users, and Web OAuth client origins are manual console
-steps. Everything else should be scripted with `gcloud` or infrastructure as code. See
-`google-auth-and-cloud-run.md` for the current OAuth setup procedure.
+## Security invariants
 
-## Secrets
-
-NEVER commit `.env`, OAuth secrets, database passwords, ADC files, or service-account JSON. The
-browser flow uses only the public OAuth client ID; retain any client secret solely in Secret Manager
-if a future authorization-code flow requires it.
+The service is public only so browsers can load the login page. Protected APIs verify Google ID
+tokens and enforce the configured allowlist. Cloud SQL has a public IP for the managed connector,
+but no authorized client networks; Cloud Run connects through its `/cloudsql/<instance>` Unix
+socket. Never commit `.env`, OAuth secrets, database passwords, ADC files, or service-account keys.
+Never log a resolved database URL, SQL parameters, prompts, transcript text, bearer tokens, or
+credentials. Prompt and response content capture in Cloud Trace stays disabled.

@@ -60,7 +60,9 @@ make web-dev
 Open `http://127.0.0.1:5173`. The fixture-backed API runs at
 `http://127.0.0.1:8000` and requires no cloud credentials.
 
-For a zero-infrastructure fixture run, set `STORE_BACKEND=memory`. For live Gemini,
+For a zero-infrastructure fixture run, set `STORE_BACKEND=memory`. The deployed service uses Cloud
+SQL PostgreSQL with pgvector and deterministic `fixture:hash-v1:768` embeddings; packaged fixtures
+are loaded only by the idempotent seed job. For live Gemini,
 set `RUNTIME_MODE=agent_platform`, configure the project and Application Default
 Credentials, and re-seed so stored vectors and query vectors share the same
 embedding model. The live defaults use the Agent Platform `global` endpoint,

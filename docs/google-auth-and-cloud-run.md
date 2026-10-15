@@ -53,12 +53,13 @@ Cloud SQL, Secret Manager, image builds, migration/seed jobs, Cloud Run deployme
 and smoke tests. Creating/configuring the Google Auth Platform branding and Web OAuth client is the
 one manual console step in the recommended workflow.
 
-## First Cloud Run deployment
+## Cloud Run and Cloud SQL deployment
 
-The initial script intentionally uses the in-memory fixture store so Cloud Run can be validated
-before provisioning continuously billed Cloud SQL. It uses live Agent Platform agents and
-embeddings, allows only the configured Google users, scales to zero, and caps the service at one
-instance.
+The deployment script provisions the hackathon Cloud SQL instance, builds one immutable image,
+runs the migration and seed jobs, deploys a no-traffic candidate, verifies PostgreSQL readiness,
+and then shifts traffic. The API uses live Agent Platform generation with deterministic local
+query embeddings and PostgreSQL/pgvector retrieval. It allows only configured Google users,
+scales to zero, and caps the service at one instance.
 
 ```bash
 gcloud auth login
@@ -66,6 +67,11 @@ export GOOGLE_OAUTH_CLIENT_ID="your-client-id.apps.googleusercontent.com"
 export ALLOWED_GOOGLE_EMAILS="alice@example.com,bob@example.com"
 ./infra/deploy-cloud-run-demo.sh
 ```
+
+The database password is generated once and stored in Secret Manager as `lotus-db-password`.
+Cloud Run receives it through secret injection and reaches PostgreSQL through the attached
+`/cloudsql/<instance-connection-name>` Unix socket. Neither the secret nor a resolved database DSN
+may appear in source, image layers, deployment output, logs, or traces.
 
 After deployment, add the printed HTTPS origin to the OAuth client's **Authorized JavaScript
 origins**, then open the URL and sign in. Do not add a path or trailing slash to the origin.

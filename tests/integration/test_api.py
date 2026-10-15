@@ -11,6 +11,18 @@ def test_ready_is_fixture_backed() -> None:
     assert len(response.headers["X-Request-ID"]) == 12
 
 
+def test_ready_returns_503_when_store_is_unavailable(monkeypatch) -> None:
+    class UnavailableStore:
+        @staticmethod
+        def ready() -> bool:
+            return False
+
+    monkeypatch.setattr("lotus_api.main.get_store", lambda: UnavailableStore())
+    response = client.get("/v1/readyz")
+    assert response.status_code == 503
+    assert response.json()["status"] == "not_ready"
+
+
 def test_grounded_answer_contains_scope_and_evidence() -> None:
     response = client.post(
         "/v1/chat/messages",

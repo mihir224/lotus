@@ -18,14 +18,14 @@ flowchart LR
   Web --> Result
   Code --> Result
   Anomaly --> Result
-  Data --> Docs[(Fixture documents)]
-  Meeting --> Transcripts[(Transcript JSON + chunks)]
+  Data --> PG[(Cloud SQL PostgreSQL + pgvector)]
+  Meeting --> PG
+  API --> PG
+  Seed[Cloud Run seed job] -->|fixture bootstrap| PG
   Web --> Search[Google Search grounding]
   Code --> Repos[(Authorized mock repos)]
   API -. safe RunEvent SSE .-> UI
   API -. metadata-only OTel .-> Trace[Cloud Trace]
-  Docs -. future .-> PG[(PostgreSQL + pgvector)]
-  Transcripts -. future .-> PG
 ```
 
 The editable Mermaid source above is the source of truth. Exported hackathon assets are in
@@ -35,11 +35,13 @@ The editable Mermaid source above is the source of truth. Exported hackathon ass
 
 - `RUNTIME_MODE` controls generation. Cloud Run uses live Planner, Result, Meeting Analysis, and
   Google Search agents.
-- `EMBEDDING_RUNTIME_MODE` independently controls indexing/query embeddings. The scale-to-zero
-  memory deployment uses deterministic 768-dimensional fixture embeddings, avoiding live
-  re-embedding at each cold start.
-- `STORE_BACKEND=memory` remains the no-cost deployment. PostgreSQL/pgvector repositories and
-  migrations remain ready for a later Cloud SQL deployment.
+- `EMBEDDING_RUNTIME_MODE` independently controls indexing/query embeddings. Cloud Run uses the
+  deterministic 768-dimensional `fixture:hash-v1:768` embedder, so query vectors are computed
+  locally without a model call.
+- Deployed Cloud Run uses `STORE_BACKEND=postgres` and reads all searchable and mutable workspace
+  state from Cloud SQL. Packaged fixtures are seed inputs used only by the migration/seed jobs;
+  API startup never reads or embeds them.
+- `STORE_BACKEND=memory` remains available only for deterministic tests and explicit local demos.
 - Planning/Jira and Docs/Confluence selections use ID-only workspace context. Their final browser
   wiring waits for Vanshika's branch; server-side adapters must resolve IDs and re-check ACLs.
 

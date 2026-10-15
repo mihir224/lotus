@@ -13,4 +13,6 @@ def get_store() -> KnowledgeStore:
     embedder = build_embedder(settings)
     if settings.store_backend == "postgres":
         return PostgresKnowledgeStore(settings, embedder)
-    return MemoryKnowledgeStore(settings, embedder)
+    if settings.store_backend == "memory":
+        return MemoryKnowledgeStore(settings, embedder)
+    raise ValueError(f"Unsupported STORE_BACKEND: {settings.store_backend}")

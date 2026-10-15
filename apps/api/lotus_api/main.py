@@ -8,7 +8,7 @@ from time import perf_counter
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
 from fastapi.responses import StreamingResponse
@@ -142,10 +142,13 @@ def authenticated_user(
 
 
 @app.get("/v1/readyz")
-def ready() -> dict[str, object]:
+def ready(response: Response) -> dict[str, object]:
     store = get_store()
+    store_ready = store.ready()
+    if not store_ready:
+        response.status_code = 503
     return {
-        "status": "ready" if store.ready() else "not_ready",
+        "status": "ready" if store_ready else "not_ready",
         "runtime": settings.runtime_mode,
         "store": settings.store_backend,
         "gcp_configured": bool(settings.google_cloud_project),

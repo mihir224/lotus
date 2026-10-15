@@ -29,18 +29,21 @@ and deterministic answer composition. Do not make fixture tests call Google.
 
 ## Storage invariants
 
-PostgreSQL + pgvector has three primary tables created by `0001_vector_store.py`:
+PostgreSQL + pgvector has five application tables created across the Alembic migration chain:
 
 - `document_embeddings`
 - `meeting_transcripts`
 - `transcript_embeddings`
+- `calendar_events`
+- `board_issues`
 
 Both vector tables use normalized 768-dimensional vectors. Never rank rows created by a different
 `embedding_model`. Every search MUST filter tenant, project, ACL overlap, and active model before
 ordering by cosine distance. Transcript evidence MUST retain meeting ID and timestamp range.
 
-`STORE_BACKEND=memory` is the zero-infrastructure test path. `STORE_BACKEND=postgres` is the local
-and deployment target. Seeding MUST remain idempotent for each embedding model.
+`STORE_BACKEND=memory` is the zero-infrastructure test path. Deployed Cloud Run and normal local
+integration runs use `STORE_BACKEND=postgres`. Raw files under `demo_data` are bootstrap inputs,
+not an API-time retrieval fallback. Seeding MUST remain idempotent for each embedding model.
 
 ## Authentication and abuse control
 

@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from datetime import UTC, datetime
 from typing import Any
 
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..chunking import chunk_transcript
 from ..config import Settings
+from ..db_observability import instrument_database, record_retrieval
 from ..embeddings import Embedder
 from ..models import (
     AuthContext,
@@ -30,19 +32,34 @@ from .models import (
     TranscriptEmbeddingRow,
 )
 
+logger = logging.getLogger("uvicorn.error.lotus.database")
+
 
 class PostgresKnowledgeStore:
     def __init__(self, settings: Settings, embedder: Embedder):
         self.settings = settings
         self.embedder = embedder
-        self.engine = create_engine(settings.database_url, pool_pre_ping=True)
+        self.engine = create_engine(
+            settings.database_connection_url,
+            pool_pre_ping=True,
+            pool_size=settings.db_pool_size,
+            max_overflow=settings.db_max_overflow,
+            pool_timeout=settings.db_pool_timeout_seconds,
+            pool_recycle=settings.db_pool_recycle_seconds,
+        )
+        instrument_database(self.engine)
 
     def ready(self) -> bool:
         try:
             with self.engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
+            logger.info("db.readiness store=postgres ready=true")
             return True
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "db.readiness store=postgres ready=false error=%s",
+                type(exc).__name__,
+            )
             return False
 
     def _load(self, relative: str) -> Any:
@@ -157,6 +174,7 @@ class PostgresKnowledgeStore:
         statement = statement.order_by(distance).limit(top_k)
         with Session(self.engine) as session:
             rows = session.execute(statement).all()
+        record_retrieval("documents", len(rows))
         return [
             Evidence(
                 source_id=row.source_id,
@@ -209,6 +227,7 @@ class PostgresKnowledgeStore:
         statement = statement.order_by(distance).limit(top_k)
         with Session(self.engine) as session:
             rows = session.execute(statement).all()
+        record_retrieval("transcripts", len(rows))
         return [
             Evidence(
                 source_id=str(chunk.id),

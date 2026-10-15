@@ -12,6 +12,7 @@
   <rect x="515" y="500" rx="18" width="240" height="90" class="a"/><text x="574" y="540" class="t">Result Agent</text><text x="558" y="568" class="s">grounded final response</text>
   <path d="M255 390L575 500" class="l"/><path d="M505 390L610 500" class="l"/><path d="M755 390L680 500" class="l"/><path d="M1005 390L720 500" class="l"/>
   <rect x="1040" y="120" rx="18" width="280" height="90" class="b"/><text x="1088" y="160" class="t">Google Cloud Trace</text><text x="1082" y="188" class="s">metadata only · no content</text><path d="M580 145H1040" class="l"/>
-  <rect x="230" y="680" rx="16" width="300" height="70" class="b"/><text x="269" y="723" class="t">Fixture memory store</text><rect x="750" y="680" rx="16" width="340" height="70" class="b"/><text x="790" y="723" class="t">Future pgvector / Cloud SQL</text>
-  <path d="M515 590L390 680" class="l"/><path d="M755 590L900 680" class="l"/>
+  <rect x="180" y="680" rx="16" width="350" height="70" class="b"/><text x="221" y="711" class="t">Cloud SQL PostgreSQL</text><text x="252" y="738" class="s">persistent state · pgvector</text>
+  <rect x="750" y="680" rx="16" width="340" height="70" class="b"/><text x="801" y="711" class="t">Cloud Run Jobs</text><text x="798" y="738" class="s">Alembic migration · seed</text>
+  <path d="M255 390L300 680" class="l"/><path d="M505 390L410 680" class="l"/><path d="M920 680L530 715" class="l"/>
 </svg>
