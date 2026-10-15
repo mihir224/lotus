@@ -209,3 +209,14 @@ class CalendarEventItem(StrictModel):
     ended_at: datetime
     canceled: bool = False
     recurring: bool = False
+
+
+class CalendarEventCreate(StrictModel):
+    title: str = Field(min_length=1, max_length=200)
+    project_id: str = Field(default="payments", min_length=1, max_length=128)
+    location: str | None = None
+    description: str = ""
+    started_at: datetime
+    ended_at: datetime
+    attendees: list[str] = Field(default_factory=list)
+    video_meeting: bool = False

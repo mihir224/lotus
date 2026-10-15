@@ -1,22 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  createCalendarEvent,
   fetchCalendarEvents,
   fetchMeetingRecord,
   resolveRecordingUrl,
   summarizeMeeting
 } from "./calendarApi";
-import type { CalendarEvent, MeetingAnalysis, MeetingRecord } from "./types";
+import { NewMeetingModal, type NewMeetingDraft } from "./NewMeetingModal";
+import type { CalendarEvent, MeetingAnalysis, MeetingRecord } from "../../types";
 
 const GRID_START_HOUR = 0;
 const GRID_END_HOUR = 23;
 const HOUR_HEIGHT = 48;
+const GRID_BODY_GUTTER = 10;
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
-function startOfWorkWeek(date: Date) {
+function normalizeDay(date: Date) {
   const copy = new Date(date);
-  const weekday = copy.getDay();
-  const offset = weekday === 0 ? -6 : 1 - weekday;
-  copy.setDate(copy.getDate() + offset);
   copy.setHours(0, 0, 0, 0);
   return copy;
 }
@@ -85,7 +85,8 @@ function eventStyle(event: CalendarEvent) {
   const end = new Date(event.ended_at);
   const startMinutes = start.getHours() * 60 + start.getMinutes();
   const endMinutes = end.getHours() * 60 + end.getMinutes();
-  const top = ((startMinutes - GRID_START_HOUR * 60) / 60) * HOUR_HEIGHT;
+  const top =
+    GRID_BODY_GUTTER + ((startMinutes - GRID_START_HOUR * 60) / 60) * HOUR_HEIGHT;
   const height = ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT;
   return { top: `${top}px`, height: `${Math.max(height, 28)}px` };
 }
@@ -104,10 +105,14 @@ function addMonths(date: Date, months: number) {
 }
 
 function startOfCalendarWeek(date: Date) {
-  const copy = new Date(date);
+  const copy = normalizeDay(date);
   copy.setDate(copy.getDate() - copy.getDay());
-  copy.setHours(0, 0, 0, 0);
   return copy;
+}
+
+/** Monday–Friday work week in the Sun–Sat week that contains `date`. */
+function startOfWorkWeek(date: Date) {
+  return normalizeDay(addDays(startOfCalendarWeek(date), 1));
 }
 
 function buildMonthWeeks(viewMonth: Date) {
@@ -198,6 +203,7 @@ function MeetingSummary({ record }: { record: MeetingRecord }) {
 
 export function CalendarView({ today }: CalendarViewProps) {
   const gridScrollRef = useRef<HTMLDivElement>(null);
+  const [selectedDate, setSelectedDate] = useState(() => normalizeDay(today));
   const [weekStart, setWeekStart] = useState(() => startOfWorkWeek(today));
   const [sidebarMonth, setSidebarMonth] = useState(() => startOfMonth(today));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -211,6 +217,45 @@ export function CalendarView({ today }: CalendarViewProps) {
   const [summaryRecord, setSummaryRecord] = useState<MeetingRecord | null>(null);
   const [summarizingId, setSummarizingId] = useState<string | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [newMeetingOpen, setNewMeetingOpen] = useState(false);
+  const [creatingMeeting, setCreatingMeeting] = useState(false);
+  const [createMeetingError, setCreateMeetingError] = useState<string | null>(null);
+
+  async function reloadEvents(forWeekStart: Date) {
+    const rangeStart = isoDayStart(forWeekStart);
+    const rangeEnd = isoDayStart(addDays(forWeekStart, 5));
+    const rows = await fetchCalendarEvents(rangeStart, rangeEnd);
+    setEvents(rows);
+  }
+
+  async function handleCreateMeeting(draft: NewMeetingDraft) {
+    setCreatingMeeting(true);
+    setCreateMeetingError(null);
+    try {
+      const started = new Date(`${draft.date}T${draft.startTime}`);
+      const ended = new Date(`${draft.date}T${draft.endTime}`);
+      const event = await createCalendarEvent({
+        title: draft.title.trim(),
+        location: draft.location.trim() || null,
+        description: draft.description.trim(),
+        started_at: started.toISOString(),
+        ended_at: ended.toISOString(),
+        attendees: draft.attendees
+          .split(",")
+          .map((name) => name.trim())
+          .filter(Boolean),
+        video_meeting: draft.videoMeeting
+      });
+      const eventStart = new Date(event.started_at);
+      focusDate(eventStart);
+      await reloadEvents(startOfWorkWeek(eventStart));
+    } catch (reason) {
+      setCreateMeetingError(reason instanceof Error ? reason.message : "Unable to create meeting");
+      throw reason;
+    } finally {
+      setCreatingMeeting(false);
+    }
+  }
 
   async function openSummary(event: CalendarEvent) {
     setSummarizingId(event.meeting_id);
@@ -258,9 +303,19 @@ export function CalendarView({ today }: CalendarViewProps) {
     };
   }, [weekStart]);
 
-  useEffect(() => {
-    setSidebarMonth(startOfMonth(weekStart));
-  }, [weekStart]);
+  function focusDate(day: Date) {
+    const normalized = normalizeDay(day);
+    setSelectedDate(normalized);
+    setWeekStart(startOfWorkWeek(normalized));
+    setSidebarMonth(startOfMonth(normalized));
+  }
+
+  function shiftWorkWeek(days: number) {
+    const monday = addDays(weekStart, days);
+    setWeekStart(monday);
+    setSelectedDate(monday);
+    setSidebarMonth(startOfMonth(monday));
+  }
 
   useEffect(() => {
     const node = gridScrollRef.current;
@@ -297,10 +352,11 @@ export function CalendarView({ today }: CalendarViewProps) {
   }, []);
 
   const isToday = (date: Date) => isSameDay(date, today);
+  const isSelected = (date: Date) => isSameDay(date, selectedDate);
 
   const monthWeeks = useMemo(() => buildMonthWeeks(sidebarMonth), [sidebarMonth]);
   const monthLabel = sidebarMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  const highlightedWeekStart = startOfCalendarWeek(today);
+  const highlightedWeekStart = startOfCalendarWeek(selectedDate);
 
   return (
     <div className="calendar-shell">
@@ -348,11 +404,10 @@ export function CalendarView({ today }: CalendarViewProps) {
                       <button
                         type="button"
                         key={day.toISOString()}
-                        className={`calendar-mini-day${outside ? " outside" : ""}${isToday(day) ? " today" : ""}`}
-                        onClick={() => {
-                          setSidebarMonth(startOfMonth(day));
-                          setWeekStart(startOfWorkWeek(day));
-                        }}
+                        className={`calendar-mini-day${outside ? " outside" : ""}${isToday(day) ? " today" : ""}${
+                          isSelected(day) ? " selected" : ""
+                        }`}
+                        onClick={() => focusDate(day)}
                       >
                         <span>{day.getDate()}</span>
                       </button>
@@ -366,10 +421,6 @@ export function CalendarView({ today }: CalendarViewProps) {
         <div className="calendar-sidebar-divider" aria-hidden="true">
           <span>▾</span>
         </div>
-        <button type="button" className="calendar-sidebar-link">
-          <span className="calendar-sidebar-icon" aria-hidden="true">+</span>
-          Add calendar
-        </button>
         <div className="calendar-my-calendars">
           <button type="button" className="calendar-my-calendars-head">
             <span aria-hidden="true">▾</span>
@@ -389,14 +440,14 @@ export function CalendarView({ today }: CalendarViewProps) {
       <div className="calendar-main">
       <div className="calendar-toolbar">
         <div className="calendar-toolbar-left">
-          <button type="button" className="calendar-btn" onClick={() => setWeekStart(startOfWorkWeek(today))}>
+          <button type="button" className="calendar-btn" onClick={() => focusDate(today)}>
             Today
           </button>
           <button
             type="button"
             className="calendar-icon-btn"
             aria-label="Previous week"
-            onClick={() => setWeekStart((prev) => addDays(prev, -7))}
+            onClick={() => shiftWorkWeek(-7)}
           >
             ‹
           </button>
@@ -404,7 +455,7 @@ export function CalendarView({ today }: CalendarViewProps) {
             type="button"
             className="calendar-icon-btn"
             aria-label="Next week"
-            onClick={() => setWeekStart((prev) => addDays(prev, 7))}
+            onClick={() => shiftWorkWeek(7)}
           >
             ›
           </button>
@@ -412,7 +463,14 @@ export function CalendarView({ today }: CalendarViewProps) {
         </div>
         <div className="calendar-toolbar-right">
           <span className="calendar-view-chip">Work week</span>
-          <button type="button" className="calendar-btn calendar-btn-primary">
+          <button
+            type="button"
+            className="calendar-btn calendar-btn-primary"
+            onClick={() => {
+              setCreateMeetingError(null);
+              setNewMeetingOpen(true);
+            }}
+          >
             + New meeting
           </button>
         </div>
@@ -427,7 +485,10 @@ export function CalendarView({ today }: CalendarViewProps) {
           <div className="calendar-grid">
             <div className="calendar-corner" />
             {workDays.map((day) => (
-              <div className={`calendar-day-head${isToday(day) ? " today" : ""}`} key={day.toISOString()}>
+              <div
+                className={`calendar-day-head${isToday(day) ? " today" : ""}${isSelected(day) ? " selected" : ""}`}
+                key={day.toISOString()}
+              >
                 <span>{formatDayHeader(day)}</span>
               </div>
             ))}
@@ -449,7 +510,7 @@ export function CalendarView({ today }: CalendarViewProps) {
               <div
                 className="calendar-day-col"
                 key={day.toISOString()}
-                style={{ height: hours.length * HOUR_HEIGHT }}
+                style={{ height: hours.length * HOUR_HEIGHT + GRID_BODY_GUTTER }}
               >
                 <div className="calendar-day-lines">
                   {hours.map((hour) => (
@@ -663,6 +724,18 @@ export function CalendarView({ today }: CalendarViewProps) {
           </div>
         </div>
       )}
+
+      <NewMeetingModal
+        open={newMeetingOpen}
+        anchorDate={selectedDate}
+        onClose={() => setNewMeetingOpen(false)}
+        onSave={async (draft) => {
+          await handleCreateMeeting(draft);
+          setNewMeetingOpen(false);
+        }}
+        saving={creatingMeeting}
+        error={createMeetingError}
+      />
     </div>
   );
 }

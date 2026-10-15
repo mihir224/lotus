@@ -1,5 +1,5 @@
-import type { CalendarEvent, MeetingRecord } from "./types";
-import { authHeaders } from "./auth";
+import type { CalendarEvent, MeetingRecord } from "../../types";
+import { authHeaders } from "../../auth";
 
 export const DEMO_RECORDING_SRC =
   "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
@@ -24,6 +24,30 @@ export async function fetchMeetingRecord(meetingId: string) {
   const response = await fetch(`/v1/meetings/${meetingId}`, { headers: authHeaders() });
   if (!response.ok) throw new Error(`Meeting request failed with ${response.status}`);
   return (await response.json()) as MeetingRecord;
+}
+
+export type CreateCalendarEventPayload = {
+  title: string;
+  project_id?: string;
+  location?: string | null;
+  description?: string;
+  started_at: string;
+  ended_at: string;
+  attendees?: string[];
+  video_meeting?: boolean;
+};
+
+export async function createCalendarEvent(payload: CreateCalendarEventPayload) {
+  const response = await fetch("/v1/calendar/events", {
+    method: "POST",
+    headers: authHeaders(true),
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(body?.detail ?? `Create event failed with ${response.status}`);
+  }
+  return (await response.json()) as CalendarEvent;
 }
 
 export async function summarizeMeeting(meetingId: string) {

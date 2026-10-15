@@ -12,13 +12,14 @@ from fastapi.requests import Request
 from fastapi.staticfiles import StaticFiles
 
 from .auth import get_auth_context
-from .calendar import list_calendar_events
+from .calendar import create_calendar_event, list_calendar_events
 from .config import get_settings
 from .meetings import process_meeting, summarize_meeting
 from .models import (
     AuthConfig,
     AuthContext,
     AuthenticatedUser,
+    CalendarEventCreate,
     CalendarEventItem,
     ChatRequest,
     GroundedAnswer,
@@ -185,6 +186,17 @@ def list_calendar_events_endpoint(
     date_to: datetime | None = None,
 ) -> list[CalendarEventItem]:
     return list_calendar_events(auth, project_id, date_from, date_to)
+
+
+@app.post("/v1/calendar/events", response_model=CalendarEventItem)
+def create_calendar_event_endpoint(
+    payload: CalendarEventCreate,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+) -> CalendarEventItem:
+    try:
+        return create_calendar_event(get_store(), auth, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @app.get("/v1/meetings", response_model=list[MeetingListItem])

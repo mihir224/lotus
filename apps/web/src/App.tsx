@@ -1,4 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
+import { CalendarView } from "./components/calendar/CalendarView";
+import { AppRail } from "./components/navigation/AppRail";
+import type { AppSection } from "./components/navigation/types";
+import { AIWorkspace } from "./components/workspace/AIWorkspace";
+import { EvidenceDrawer } from "./components/workspace/EvidenceDrawer";
+import { PlaceholderView } from "./components/workspace/PlaceholderView";
 import {
   authHeaders,
   type AuthConfig,
@@ -7,17 +13,7 @@ import {
   signOut,
   storedAuthSession
 } from "./auth";
-import { CalendarView } from "./CalendarView";
 import type { GroundedAnswer } from "./types";
-
-type WorkspaceTab = "planner" | "specialists" | "result" | "calendar";
-
-const workflowTabs: { id: WorkspaceTab; label: string }[] = [
-  { id: "planner", label: "Planner" },
-  { id: "specialists", label: "Specialists" },
-  { id: "result", label: "Result" },
-  { id: "calendar", label: "Calendar" }
-];
 
 const suggestions = [
   "Why are checkout retries capped, and what should on-call do?",
@@ -29,7 +25,7 @@ export function App() {
   const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
   const [session, setSession] = useState<AuthSession | null>(storedAuthSession);
   const [authConfigError, setAuthConfigError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>("planner");
+  const [activeSection, setActiveSection] = useState<AppSection>("chat");
   const [message, setMessage] = useState(suggestions[0]);
   const [answer, setAnswer] = useState<GroundedAnswer | null>(null);
   const [loading, setLoading] = useState(false);
@@ -79,6 +75,30 @@ export function App() {
     }
   }
 
+  function renderMainContent() {
+    switch (activeSection) {
+      case "planner":
+        return <PlaceholderView title="Welcome to Planner" />;
+      case "docs":
+        return <PlaceholderView title="Welcome to Docs" />;
+      case "calendar":
+        return <CalendarView today={new Date()} />;
+      case "chat":
+        return (
+          <AIWorkspace
+            message={message}
+            onMessageChange={setMessage}
+            answer={answer}
+            loading={loading}
+            error={error}
+            onSubmit={submit}
+          />
+        );
+      default:
+        return null;
+    }
+  }
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -114,91 +134,14 @@ export function App() {
         </div>
       </header>
 
-      <section className="workspace">
-        <aside className="rail" aria-label="Agent workflow">
-          <p className="eyebrow">Agent workflow</p>
-          {workflowTabs.map((item, index) => (
-            <button
-              type="button"
-              className={`mode${activeTab === item.id ? " active" : ""}`}
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-            >
-              <span>{index + 1}</span>
-              {item.label}
-            </button>
-          ))}
-          <div className="rail-note">
-            <span className="pulse" />
-            <div><strong>Local ready</strong><small>No cloud credentials</small></div>
-          </div>
-        </aside>
+      <section className={`workspace${activeSection === "chat" ? "" : " workspace-two-col"}`}>
+        <AppRail activeSection={activeSection} onSelect={setActiveSection} />
 
-        <section className={`conversation${activeTab === "calendar" ? " conversation-calendar" : ""}`}>
-          {activeTab === "calendar" ? (
-            <CalendarView today={new Date()} />
-          ) : (
-            <>
-              <div className="intro">
-                <p className="eyebrow">Trusted answers, visible evidence</p>
-                <h1>What do you need to understand?</h1>
-                <p>Ask across product knowledge, architecture, runbooks, and exact source records.</p>
-              </div>
-
-              <div className="suggestions">
-                {suggestions.map((item) => (
-                  <button type="button" onClick={() => setMessage(item)} key={item}>{item}</button>
-                ))}
-              </div>
-
-              {answer && (
-                <article className="answer-card">
-                  <div className="answer-head">
-                    <span className="route-chip">{answer.route.route}</span>
-                    <span>{answer.agents_used.join(" → ")}</span>
-                    <span>{answer.route.live_retrieval ? "Live web retrieval" : "Indexed retrieval"}</span>
-                  </div>
-                  <h2>Answer</h2>
-                  <p>{answer.answer}</p>
-                  {answer.uncertainty.length > 0 && (
-                    <div className="uncertainty"><strong>Uncertainty</strong>{answer.uncertainty.join(" ")}</div>
-                  )}
-                </article>
-              )}
-
-              {error && <div className="error">{error}</div>}
-
-              <form className="composer" onSubmit={submit}>
-                <textarea
-                  aria-label="Ask Lotus"
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  rows={3}
-                />
-                <div>
-                  <span>Planner selects the right agents automatically</span>
-                  <button type="submit" disabled={loading}>{loading ? "Checking sources…" : "Ask Lotus"}</button>
-                </div>
-              </form>
-            </>
-          )}
+        <section className={`conversation${activeSection === "calendar" ? " conversation-calendar" : ""}`}>
+          {renderMainContent()}
         </section>
 
-        <aside className="evidence" aria-label="Evidence drawer">
-          <div className="drawer-head">
-            <div><p className="eyebrow">Evidence</p><h2>Source trail</h2></div>
-            <span>{answer?.evidence.length ?? 0}</span>
-          </div>
-          {!answer && <p className="empty">Sources used for an answer will appear here with scope and provenance.</p>}
-          {answer?.evidence.map((item, index) => (
-            <article className="source" key={`${item.source_id}-${index}`}>
-              <div><span>[{index + 1}]</span><small>{item.retrieval_method.replace("_", " ")}</small></div>
-              <h3>{item.title ?? item.source_id}</h3>
-              <p>{item.snippet}</p>
-              <footer><strong>{item.source_type}</strong><span>{item.source_id}</span></footer>
-            </article>
-          ))}
-        </aside>
+        {activeSection === "chat" && <EvidenceDrawer answer={answer} />}
       </section>
     </main>
   );
