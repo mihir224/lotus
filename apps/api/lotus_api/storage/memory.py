@@ -9,6 +9,7 @@ from ..config import Settings
 from ..embeddings import Embedder
 from ..models import (
     AuthContext,
+    CalendarEventItem,
     Evidence,
     MeetingAnalysis,
     MeetingListItem,
@@ -38,6 +39,7 @@ class MemoryKnowledgeStore:
         self.documents: dict[str, dict[str, Any]] = {}
         self.meetings: dict[str, MeetingRecord] = {}
         self.transcript_chunks: dict[str, list[dict[str, Any]]] = {}
+        self.calendar_events: dict[str, dict[str, Any]] = {}
         self.seed()
 
     def ready(self) -> bool:
@@ -70,7 +72,27 @@ class MemoryKnowledgeStore:
             )
             self.meetings[meeting_id] = record
             self._index_transcript(record, raw.get("acl_principals", ["group:demo"]))
-        return {"documents": len(self.documents), "meetings": len(self.meetings)}
+
+        calendar_rows = self._load("calendar/events.json")
+        for raw in calendar_rows:
+            payload = dict(raw)
+            item = CalendarEventItem.model_validate(
+                {
+                    key: value
+                    for key, value in payload.items()
+                    if key not in {"tenant_id", "acl_principals"}
+                }
+            )
+            self.calendar_events[item.event_id] = {
+                "item": item,
+                "tenant_id": payload["tenant_id"],
+                "acl_principals": payload.get("acl_principals", ["group:demo"]),
+            }
+        return {
+            "documents": len(self.documents),
+            "meetings": len(self.meetings),
+            "calendar_events": len(calendar_rows),
+        }
 
     def _index_transcript(self, record: MeetingRecord, principals: list[str]) -> None:
         chunks = chunk_transcript(record.transcript.segments, target_words=70)
@@ -254,3 +276,46 @@ class MemoryKnowledgeStore:
                 )
             )
         return sorted(result, key=lambda item: item.started_at, reverse=True)
+
+    def _calendar_authorized(self, row: dict[str, Any], auth: AuthContext) -> bool:
+        if row["tenant_id"] != auth.tenant_id:
+            return False
+        principals = row.get("acl_principals", [])
+        if not isinstance(principals, list):
+            return False
+        return bool(set(principals) & set(auth.principals))
+
+    def list_calendar_events(
+        self,
+        auth: AuthContext,
+        project_id: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[CalendarEventItem]:
+        result: list[CalendarEventItem] = []
+        for row in self.calendar_events.values():
+            if not self._calendar_authorized(row, auth):
+                continue
+            item: CalendarEventItem = row["item"]
+            if project_id and item.project_id != project_id:
+                continue
+            if date_from and item.started_at < date_from:
+                continue
+            if date_to and item.started_at >= date_to:
+                continue
+            result.append(item)
+        return sorted(result, key=lambda row: row.started_at)
+
+    def upsert_calendar_event(
+        self,
+        auth: AuthContext,
+        item: CalendarEventItem,
+        acl_principals: list[str] | None = None,
+    ) -> CalendarEventItem:
+        principals = acl_principals if acl_principals is not None else list(auth.principals)
+        self.calendar_events[item.event_id] = {
+            "item": item,
+            "tenant_id": auth.tenant_id,
+            "acl_principals": principals,
+        }
+        return item

@@ -2,7 +2,14 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Protocol
 
-from ..models import AuthContext, Evidence, MeetingListItem, MeetingRecord, MeetingTranscriptInput
+from ..models import (
+    AuthContext,
+    CalendarEventItem,
+    Evidence,
+    MeetingListItem,
+    MeetingRecord,
+    MeetingTranscriptInput,
+)
 
 
 class KnowledgeStore(Protocol):
@@ -49,3 +56,18 @@ class KnowledgeStore(Protocol):
         date_from: datetime | None = None,
         date_to: datetime | None = None,
     ) -> list[MeetingListItem]: ...
+
+    def list_calendar_events(
+        self,
+        auth: AuthContext,
+        project_id: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[CalendarEventItem]: ...
+
+    def upsert_calendar_event(
+        self,
+        auth: AuthContext,
+        item: CalendarEventItem,
+        acl_principals: list[str] | None = None,
+    ) -> CalendarEventItem: ...

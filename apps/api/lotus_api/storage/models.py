@@ -3,7 +3,17 @@ from datetime import datetime
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import ARRAY, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    ARRAY,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -72,6 +82,31 @@ class MeetingTranscriptRow(Base):
     transcript_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     analysis_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     processing_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class CalendarEventRow(Base):
+    __tablename__ = "calendar_events"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "event_id"),
+        Index("ix_calendar_scope_date", "tenant_id", "project_id", "started_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    meeting_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    tenant_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    organizer: Mapped[str] = mapped_column(String(160), nullable=False)
+    organizer_initials: Mapped[str] = mapped_column(String(8), nullable=False)
+    location: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ended_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    canceled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    recurring: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    acl_principals: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 

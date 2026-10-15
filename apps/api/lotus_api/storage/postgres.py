@@ -11,6 +11,7 @@ from ..config import Settings
 from ..embeddings import Embedder
 from ..models import (
     AuthContext,
+    CalendarEventItem,
     Evidence,
     MeetingAnalysis,
     MeetingListItem,
@@ -18,7 +19,12 @@ from ..models import (
     MeetingTranscriptInput,
     Scope,
 )
-from .models import DocumentEmbeddingRow, MeetingTranscriptRow, TranscriptEmbeddingRow
+from .models import (
+    CalendarEventRow,
+    DocumentEmbeddingRow,
+    MeetingTranscriptRow,
+    TranscriptEmbeddingRow,
+)
 
 
 class PostgresKnowledgeStore:
@@ -74,7 +80,31 @@ class PostgresKnowledgeStore:
                 record.analysis = MeetingAnalysis.model_validate(raw["analysis"])
                 record.status = "processed"
                 self.save_meeting(record, auth)
-        return {"documents": len(documents), "meetings": len(self._load("meetings/meetings.json"))}
+
+        calendar_rows = self._load("calendar/events.json")
+        for raw in calendar_rows:
+            payload = dict(raw)
+            item = CalendarEventItem.model_validate(
+                {
+                    key: value
+                    for key, value in payload.items()
+                    if key not in {"tenant_id", "acl_principals"}
+                }
+            )
+            self.upsert_calendar_event(
+                AuthContext(
+                    tenant_id=payload["tenant_id"],
+                    user_id="seed",
+                    principals=tuple(payload.get("acl_principals", ["group:demo"])),
+                ),
+                item,
+                list(payload.get("acl_principals", ["group:demo"])),
+            )
+        return {
+            "documents": len(documents),
+            "meetings": len(self._load("meetings/meetings.json")),
+            "calendar_events": len(calendar_rows),
+        }
 
     def search_documents(
         self,
@@ -330,3 +360,82 @@ class PostgresKnowledgeStore:
             )
             for row in rows
         ]
+
+    @staticmethod
+    def _calendar_row_to_item(row: CalendarEventRow) -> CalendarEventItem:
+        return CalendarEventItem(
+            event_id=row.event_id,
+            meeting_id=row.meeting_id,
+            project_id=row.project_id,
+            title=row.title,
+            organizer=row.organizer,
+            organizer_initials=row.organizer_initials,
+            location=row.location,
+            description=row.description,
+            started_at=row.started_at,
+            ended_at=row.ended_at,
+            canceled=row.canceled,
+            recurring=row.recurring,
+        )
+
+    def list_calendar_events(
+        self,
+        auth: AuthContext,
+        project_id: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+    ) -> list[CalendarEventItem]:
+        statement = select(CalendarEventRow).where(
+            CalendarEventRow.tenant_id == auth.tenant_id,
+            CalendarEventRow.acl_principals.op("&&")(list(auth.principals)),
+        )
+        if project_id:
+            statement = statement.where(CalendarEventRow.project_id == project_id)
+        if date_from:
+            statement = statement.where(CalendarEventRow.started_at >= date_from)
+        if date_to:
+            statement = statement.where(CalendarEventRow.started_at < date_to)
+        statement = statement.order_by(CalendarEventRow.started_at)
+        with Session(self.engine) as session:
+            rows = session.scalars(statement).all()
+        return [self._calendar_row_to_item(row) for row in rows]
+
+    def upsert_calendar_event(
+        self,
+        auth: AuthContext,
+        item: CalendarEventItem,
+        acl_principals: list[str] | None = None,
+    ) -> CalendarEventItem:
+        principals = acl_principals if acl_principals is not None else list(auth.principals)
+        now = datetime.now(UTC)
+        with Session(self.engine) as session:
+            row = session.scalar(
+                select(CalendarEventRow).where(
+                    CalendarEventRow.tenant_id == auth.tenant_id,
+                    CalendarEventRow.event_id == item.event_id,
+                )
+            )
+            values = {
+                "event_id": item.event_id,
+                "meeting_id": item.meeting_id,
+                "tenant_id": auth.tenant_id,
+                "project_id": item.project_id,
+                "title": item.title,
+                "organizer": item.organizer,
+                "organizer_initials": item.organizer_initials,
+                "location": item.location,
+                "description": item.description,
+                "started_at": item.started_at,
+                "ended_at": item.ended_at,
+                "canceled": item.canceled,
+                "recurring": item.recurring,
+                "acl_principals": principals,
+                "updated_at": now,
+            }
+            if row is None:
+                session.add(CalendarEventRow(**values))
+            else:
+                for key, value in values.items():
+                    setattr(row, key, value)
+            session.commit()
+        return item

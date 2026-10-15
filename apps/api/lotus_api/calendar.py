@@ -1,28 +1,15 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from .fixtures import load_fixture
 from .models import (
     AuthContext,
     CalendarEventCreate,
     CalendarEventItem,
     MeetingAnalysis,
-    MeetingRecord,
     MeetingTranscriptInput,
     TranscriptSegment,
 )
 from .storage.base import KnowledgeStore
-
-_created_events: list[dict[str, object]] = []
-
-
-def _allowed(row: dict[str, object], auth: AuthContext) -> bool:
-    if row["tenant_id"] != auth.tenant_id:
-        return False
-    principals = row.get("acl_principals", [])
-    if not isinstance(principals, list):
-        return False
-    return bool(set(principals) & set(auth.principals))
 
 
 def _organizer_initials(name: str) -> str:
@@ -35,30 +22,13 @@ def _organizer_initials(name: str) -> str:
 
 
 def list_calendar_events(
+    store: KnowledgeStore,
     auth: AuthContext,
     project_id: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
 ) -> list[CalendarEventItem]:
-    result: list[CalendarEventItem] = []
-    rows = load_fixture("calendar/events.json") + _created_events
-    for raw in rows:
-        if not _allowed(raw, auth):
-            continue
-        payload = {
-            key: value
-            for key, value in raw.items()
-            if key not in {"tenant_id", "acl_principals"}
-        }
-        item = CalendarEventItem.model_validate(payload)
-        if project_id and item.project_id != project_id:
-            continue
-        if date_from and item.started_at < date_from:
-            continue
-        if date_to and item.started_at >= date_to:
-            continue
-        result.append(item)
-    return sorted(result, key=lambda row: row.started_at)
+    return store.list_calendar_events(auth, project_id, date_from, date_to)
 
 
 def create_calendar_event(
@@ -124,11 +94,5 @@ def create_calendar_event(
     record.updated_at = datetime.now(UTC)
     store.save_meeting(record, auth)
 
-    _created_events.append(
-        {
-            **item.model_dump(),
-            "tenant_id": auth.tenant_id,
-            "acl_principals": list(auth.principals),
-        }
-    )
+    store.upsert_calendar_event(auth, item)
     return item

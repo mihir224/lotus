@@ -185,7 +185,7 @@ def list_calendar_events_endpoint(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
 ) -> list[CalendarEventItem]:
-    return list_calendar_events(auth, project_id, date_from, date_to)
+    return list_calendar_events(get_store(), auth, project_id, date_from, date_to)
 
 
 @app.post("/v1/calendar/events", response_model=CalendarEventItem)
