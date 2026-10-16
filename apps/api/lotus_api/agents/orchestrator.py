@@ -13,16 +13,19 @@ from google.adk.runners import InMemoryRunner
 from google.genai import types
 from opentelemetry import trace
 
-from ..code_store import MockCodeStore
+from ..code_store import CodeStore
 from ..config import Settings
+from ..mcp_servers import register_run_context, release_run_context
 from ..models import (
     AgentName,
     Artifact,
     AuthContext,
+    ChatMessageRecord,
     ChatRequest,
     Evidence,
     ExecutionPlan,
     GroundedAnswer,
+    NavigationTarget,
     Route,
     RouteDecision,
     Scope,
@@ -32,7 +35,14 @@ from ..run_events import RunEventSink, bounded_preview, event
 from ..storage.base import KnowledgeStore
 from ..workspace_context import WorkspaceContextResolver
 from .planner import fixture_plan
-from .registry import build_planner_agent, build_result_agent, build_web_agent
+from .registry import (
+    build_documents_agent,
+    build_meeting_agent,
+    build_planner_agent,
+    build_planning_agent,
+    build_result_agent,
+    build_web_agent,
+)
 
 logger = logging.getLogger("uvicorn.error.lotus.orchestration")
 tracer = trace.get_tracer("lotus.orchestration")
@@ -44,7 +54,7 @@ class OrchestrationService:
     def __init__(self, settings: Settings, store: KnowledgeStore):
         self.settings = settings
         self.store = store
-        self.code_store = MockCodeStore(settings.fixture_dir)
+        self.code_store = CodeStore(settings.fixture_dir)
         self.workspace_context = WorkspaceContextResolver(store)
 
     def answer(
@@ -52,6 +62,7 @@ class OrchestrationService:
         request: ChatRequest,
         auth: AuthContext,
         emit: RunEventSink | None = None,
+        conversation: list[ChatMessageRecord] | None = None,
     ) -> GroundedAnswer:
         execution_id = uuid4().hex[:12]
         started = perf_counter()
@@ -76,7 +87,11 @@ class OrchestrationService:
         try:
             planner_started = perf_counter()
             self._node_started(emit, execution_id, "planner", "Planner", request)
-            plan = asyncio.run(self._plan_with_adk(request)) if live else fixture_plan(request)
+            plan = (
+                asyncio.run(self._plan_with_adk(request, conversation or []))
+                if live
+                else fixture_plan(request)
+            )
             self._node_completed(
                 emit,
                 execution_id,
@@ -95,7 +110,14 @@ class OrchestrationService:
             specialist_names = [
                 step.agent
                 for step in plan.steps
-                if step.agent in {AgentName.DATA, AgentName.MEETING, AgentName.WEB, AgentName.CODE}
+                if step.agent
+                in {
+                    AgentName.DOCUMENTS,
+                    AgentName.PLANNING,
+                    AgentName.MEETING,
+                    AgentName.WEB,
+                    AgentName.CODE,
+                }
             ]
             with ThreadPoolExecutor(max_workers=max(1, len(specialist_names))) as executor:
                 futures = {
@@ -135,9 +157,12 @@ class OrchestrationService:
             self._node_started(emit, execution_id, "result", "Result", request)
             response = self._run_result(request, auth, plan, results, execution_id)
             answer_streamed = False
+            cached_input_tokens = 0
             if live:
-                response.answer, answer_streamed = asyncio.run(
-                    self._run_result_agent(request, response, emit, execution_id)
+                response.answer, answer_streamed, cached_input_tokens = asyncio.run(
+                    self._run_result_agent(
+                        request, response, emit, execution_id, conversation or []
+                    )
                 )
             self._node_completed(
                 emit,
@@ -145,7 +170,11 @@ class OrchestrationService:
                 "result",
                 "Result",
                 result_started,
-                {"evidence_count": len(response.evidence), "answer_chars": len(response.answer)},
+                {
+                    "evidence_count": len(response.evidence),
+                    "answer_chars": len(response.answer),
+                    "cached_input_tokens": cached_input_tokens,
+                },
             )
             if not answer_streamed:
                 self._stream_answer_deltas(emit, execution_id, request.session_id, response.answer)
@@ -229,7 +258,7 @@ class OrchestrationService:
 
     async def _run_agent_details(
         self, agent, user_id: str, prompt: str, on_delta=None, timeout_seconds=None
-    ) -> tuple[str, Any | None]:
+    ) -> tuple[str, Any | None, int]:
         started = perf_counter()
         timeout_seconds = timeout_seconds or self.settings.agent_timeout_seconds
         logger.info("adk.start agent=%s prompt_chars=%s", agent.name, len(prompt))
@@ -240,6 +269,7 @@ class OrchestrationService:
         session = await runner.session_service.create_session(app_name="lotus", user_id=user_id)
         final_text = ""
         grounding_metadata = None
+        cached_input_tokens = 0
         try:
             async with asyncio.timeout(timeout_seconds):
                 async for event in runner.run_async(
@@ -248,6 +278,11 @@ class OrchestrationService:
                     new_message=types.Content(role="user", parts=[types.Part(text=prompt)]),
                     run_config=(RunConfig(streaming_mode=StreamingMode.SSE) if on_delta else None),
                 ):
+                    usage = getattr(event, "usage_metadata", None)
+                    cached_input_tokens = max(
+                        cached_input_tokens,
+                        int(getattr(usage, "cached_content_token_count", 0) or 0),
+                    )
                     if event.grounding_metadata:
                         grounding_metadata = event.grounding_metadata
                     if event.is_final_response() and event.content:
@@ -264,23 +299,35 @@ class OrchestrationService:
             )
             raise
         logger.info(
-            "adk.complete agent=%s output_chars=%s grounded=%s duration_ms=%.1f",
+            "adk.complete agent=%s output_chars=%s grounded=%s "
+            "cached_input_tokens=%s duration_ms=%.1f",
             agent.name,
             len(final_text),
             grounding_metadata is not None,
+            cached_input_tokens,
             (perf_counter() - started) * 1000,
         )
-        return final_text, grounding_metadata
+        current_span = trace.get_current_span()
+        if current_span.is_recording():
+            current_span.set_attribute("gen_ai.usage.cached_input_tokens", cached_input_tokens)
+        return final_text, grounding_metadata, cached_input_tokens
 
     async def _run_agent(self, agent, user_id: str, prompt: str) -> str:
-        output, _ = await self._run_agent_details(agent, user_id, prompt)
+        output, _, _ = await self._run_agent_details(agent, user_id, prompt)
         return output
 
-    async def _plan_with_adk(self, request: ChatRequest) -> ExecutionPlan:
+    @staticmethod
+    def _conversation_text(conversation: list[ChatMessageRecord]) -> str:
+        return "\n".join(f"{row.role}: {row.content}" for row in conversation)
+
+    async def _plan_with_adk(
+        self, request: ChatRequest, conversation: list[ChatMessageRecord] | None = None
+    ) -> ExecutionPlan:
         prompt = (
             f"Current UTC time: {datetime.now(UTC).isoformat()}\n"
             f"Project: {request.project_id}\n"
             f"Meeting context: {request.meeting_id or 'none'}\n"
+            f"Recent conversation:\n{self._conversation_text(conversation or []) or 'none'}\n"
             f"User request: {request.message}"
         )
         try:
@@ -305,7 +352,13 @@ class OrchestrationService:
 
     def _validate_live_plan(self, output: str) -> ExecutionPlan:
         plan = ExecutionPlan.model_validate_json(output)
-        allowed = {AgentName.DATA, AgentName.MEETING, AgentName.WEB, AgentName.CODE}
+        allowed = {
+            AgentName.DOCUMENTS,
+            AgentName.PLANNING,
+            AgentName.MEETING,
+            AgentName.WEB,
+            AgentName.CODE,
+        }
         specialists = [step for step in plan.steps if step.agent in allowed]
         anomaly = [step for step in plan.steps if step.agent is AgentName.ANOMALY]
         if anomaly and not any(step.agent is AgentName.MEETING for step in specialists):
@@ -323,8 +376,11 @@ class OrchestrationService:
         grounded: GroundedAnswer,
         emit: RunEventSink | None = None,
         execution_id: str = "",
-    ) -> tuple[str, bool]:
+        conversation: list[ChatMessageRecord] | None = None,
+    ) -> tuple[str, bool, int]:
         prompt = (
+            "Validated Lotus response contract follows.\n"
+            f"Recent conversation:\n{self._conversation_text(conversation or []) or 'none'}\n"
             f"User request: {request.message}\n"
             f"Validated execution plan and authorized evidence: {grounded.model_dump_json()}"
         )
@@ -342,16 +398,24 @@ class OrchestrationService:
             )
 
         try:
-            output, _ = await self._run_agent_details(
+            output, _, cached_input_tokens = await self._run_agent_details(
                 build_result_agent(self.settings), "result", prompt, on_delta
             )
         except TimeoutError:
             logger.warning("result.fallback reason=timeout")
-            return grounded.answer, streamed
-        return output or grounded.answer, streamed
+            return grounded.answer, streamed, 0
+        return output or grounded.answer, streamed, cached_input_tokens
 
     def _run_specialist(self, name, request, auth, plan) -> SpecialistResult:
-        if name is AgentName.DATA:
+        live = self.settings.runtime_mode in {"agent_platform", "vertex"}
+        if live and name in {AgentName.DOCUMENTS, AgentName.PLANNING, AgentName.MEETING}:
+            try:
+                return asyncio.run(self._live_mcp_specialist(name, request, auth))
+            except Exception as exc:
+                logger.warning(
+                    "specialist.fallback agent=%s reason=%s", name.value, type(exc).__name__
+                )
+        if name is AgentName.DOCUMENTS:
             selected = self.workspace_context.resolve(request, auth)
             retrieved = self.store.search_documents(
                 request.message, auth, request.project_id, self.settings.max_evidence_items
@@ -366,12 +430,70 @@ class OrchestrationService:
                         artifact_type="mermaid",
                         title="Generated architecture flow",
                         content=(
-                            "flowchart LR\n  User --> Planner\n  Planner --> Data\n"
-                            "  Planner --> Meeting\n  Data --> Result\n  Meeting --> Result"
+                            "flowchart LR\n  User --> Planner\n  Planner --> Documents\n"
+                            "  Planner --> Meeting\n  Documents --> Result\n  Meeting --> Result"
                         ),
                     )
                 )
             return SpecialistResult(agent=name, evidence=evidence, artifacts=artifacts)
+        if name is AgentName.PLANNING:
+            project = self.store.get_workspace_project(request.project_id, auth)
+            evidence: list[Evidence] = []
+            if project:
+                stakeholder_text = "; ".join(
+                    f"{row.employee.name} — {row.role}, {row.employee.designation}, "
+                    f"{row.employee.email} ({row.employee.contact_handle})"
+                    for row in project.stakeholders
+                )
+                evidence.append(
+                    Evidence(
+                        source_id=project.project_id,
+                        source_system="lotus_planner",
+                        source_type="project",
+                        title=project.name,
+                        snippet=(
+                            f"{project.description} Status: {project.status}. "
+                            f"Stakeholders: {stakeholder_text}"
+                        ),
+                        retrieval_method="planner_repository",
+                        scope=Scope(
+                            tenant_id=auth.tenant_id, project_id=request.project_id
+                        ),
+                        navigation_target=NavigationTarget(
+                            kind="project",
+                            entity_id=project.project_id,
+                            project_id=project.project_id,
+                            label=f"Open {project.name}",
+                        ),
+                    )
+                )
+            issues = self.store.list_board_issues(auth, request.project_id)
+            message = request.message.casefold()
+            for issue in issues:
+                if issue.issue_key.casefold() in message:
+                    evidence.append(
+                        Evidence(
+                            source_id=issue.issue_key,
+                            source_system="lotus_planner",
+                            source_type="planning_item",
+                            title=issue.title,
+                            snippet=(
+                                f"{issue.issue_key}: {issue.title}. Status {issue.status}; "
+                                f"priority {issue.priority}; assignee {issue.assignee_id}."
+                            ),
+                            retrieval_method="planner_repository",
+                            scope=Scope(
+                                tenant_id=auth.tenant_id, project_id=request.project_id
+                            ),
+                            navigation_target=NavigationTarget(
+                                kind="planning_item",
+                                entity_id=issue.issue_key,
+                                project_id=issue.project_id,
+                                label=f"Open {issue.issue_key}",
+                            ),
+                        )
+                    )
+            return SpecialistResult(agent=name, evidence=evidence)
         if name is AgentName.MEETING:
             return SpecialistResult(
                 agent=name,
@@ -414,10 +536,11 @@ class OrchestrationService:
         started = perf_counter()
         self._node_started(emit, execution_id, name.value, name.value.title(), request)
         tool = {
-            AgentName.DATA: "document_search",
+            AgentName.DOCUMENTS: "documents_mcp",
+            AgentName.PLANNING: "planner_mcp",
             AgentName.MEETING: "transcript_search",
             AgentName.WEB: "web_search",
-            AgentName.CODE: "mock_repository_search",
+            AgentName.CODE: "repository_search",
         }[name]
         tool_started = perf_counter()
         self._node_started(emit, execution_id, f"{name.value}.{tool}", tool, request, name.value)
@@ -474,9 +597,34 @@ class OrchestrationService:
         )
         return result
 
+    async def _live_mcp_specialist(
+        self, name: AgentName, request: ChatRequest, auth: AuthContext
+    ) -> SpecialistResult:
+        context_id, headers = register_run_context(auth, request)
+        try:
+            builder = {
+                AgentName.DOCUMENTS: build_documents_agent,
+                AgentName.PLANNING: build_planning_agent,
+                AgentName.MEETING: build_meeting_agent,
+            }[name]
+            prompt = (
+                f"Project: {request.project_id}\n"
+                f"Meeting ID: {request.meeting_id or 'none'}\n"
+                f"Selected planning items: {request.planning_item_ids}\n"
+                f"Selected documents: {request.document_ids}\n"
+                f"Request: {request.message}"
+            )
+            output = await self._run_agent(builder(self.settings, headers), auth.user_id, prompt)
+            result = SpecialistResult.model_validate_json(output)
+            if result.agent is not name:
+                raise ValueError("Specialist returned the wrong agent identity")
+            return result
+        finally:
+            release_run_context(context_id)
+
     async def _live_web(self, request: ChatRequest, auth: AuthContext) -> list[Evidence]:
         try:
-            output, grounding = await self._run_agent_details(
+            output, grounding, _ = await self._run_agent_details(
                 build_web_agent(self.settings),
                 auth.user_id,
                 request.message,
@@ -586,6 +734,36 @@ class OrchestrationService:
                     evidence.append(row)
                     seen.add(key)
         evidence = evidence[: self.settings.max_evidence_items]
+        if plan.artifact_request == "mermaid" and not any(
+            artifact.artifact_type == "mermaid" for artifact in artifacts
+        ):
+            lowered = " ".join([request.message, *(row.snippet for row in evidence)]).casefold()
+            if "retry" in lowered or "checkout" in lowered:
+                diagram = (
+                    "flowchart LR\n"
+                    "  Customer --> CheckoutClient[Checkout client]\n"
+                    "  CheckoutClient --> Gateway[Payment gateway]\n"
+                    "  Gateway --> Provider[Payment provider]\n"
+                    "  Provider -->|retryable failure| Backoff[Exponential backoff]\n"
+                    "  Backoff -->|full jitter; max 3 attempts| Gateway\n"
+                    "  Gateway --> Ledger[Idempotency ledger]"
+                )
+            else:
+                diagram = (
+                    "flowchart LR\n"
+                    "  User --> Planner\n"
+                    "  Planner --> Documents[Documents Agent]\n"
+                    "  Documents --> Sources[Authorized sources]\n"
+                    "  Sources --> Result[Result Agent]\n"
+                    "  Result --> Diagram[Grounded diagram]"
+                )
+            artifacts.append(
+                Artifact(
+                    artifact_type="mermaid",
+                    title="Architecture flow",
+                    content=diagram,
+                )
+            )
         scope = Scope(
             tenant_id=auth.tenant_id,
             project_id=request.project_id,
@@ -631,4 +809,12 @@ class OrchestrationService:
             agents_used=used,
             plan=plan,
             artifacts=artifacts,
+            navigation_targets=list(
+                {
+                    (target.kind, target.entity_id): target
+                    for target in (row.navigation_target for row in evidence)
+                    if target is not None
+                }.values()
+            ),
+            session_id=request.session_id,
         )

@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -40,6 +41,11 @@ class Settings(BaseSettings):
     agent_rate_limit_requests: int = 10
     agent_rate_limit_window_seconds: int = 300
     telemetry_enabled: bool = False
+    mcp_base_url: str = ""
+
+    @property
+    def internal_mcp_base_url(self) -> str:
+        return self.mcp_base_url or f"http://127.0.0.1:{os.getenv('PORT', '8000')}"
 
     @property
     def google_email_allowlist(self) -> set[str]:

@@ -8,22 +8,31 @@ schema-validated Planner creates the execution graph and Result always runs last
 flowchart LR
   UI[React workspace] -->|POST /v1/chat/stream| API[Cloud Run / FastAPI]
   API --> Planner[ADK Planner]
-  Planner --> Data[Data Agent]
+  Planner --> Docs[Documents Agent]
+  Planner --> Planning[Planning Agent]
   Planner --> Meeting[Meeting Agent]
   Planner --> Web[Web Search Agent]
-  Planner --> Code[Mock Code Agent]
+  Planner --> Code[Code Agent]
   Meeting --> Anomaly[Deterministic Anomaly]
-  Data --> Result[ADK Result]
+  Docs --> Result[ADK Result]
+  Planning --> Result
   Meeting --> Result
   Web --> Result
   Code --> Result
   Anomaly --> Result
-  Data --> PG[(Cloud SQL PostgreSQL + pgvector)]
+  Docs --> DocsMCP[Documents MCP]
+  Planning --> PlannerMCP[Planner MCP]
+  Meeting --> CalendarMCP[Calendar MCP]
+  DocsMCP --> PG[(Cloud SQL PostgreSQL + pgvector)]
+  PlannerMCP --> PG
+  CalendarMCP --> PG
   Meeting --> PG
   API --> PG
   Seed[Cloud Run seed job] -->|fixture bootstrap| PG
   Web --> Search[Google Search grounding]
-  Code --> Repos[(Authorized mock repos)]
+  Code --> Repos[(Authorized repositories)]
+  API --> Chat[(Persistent conversations)]
+  Chat --> PG
   API -. safe RunEvent SSE .-> UI
   API -. metadata-only OTel .-> Trace[Cloud Trace]
 ```
@@ -42,16 +51,22 @@ The editable Mermaid source above is the source of truth. Exported hackathon ass
   state from Cloud SQL. Packaged fixtures are seed inputs used only by the migration/seed jobs;
   API startup never reads or embeds them.
 - `STORE_BACKEND=memory` remains available only for deterministic tests and explicit local demos.
-- Planning/Jira and Docs/Confluence selections use ID-only workspace context. Their final browser
-  wiring waits for Vanshika's branch; server-side adapters must resolve IDs and re-check ACLs.
+- Planning, Documents, and Calendar specialists use scoped read-only MCP tools. The browser sends
+  IDs only; each tool resolves the entity in PostgreSQL and re-checks tenant, project, and ACLs.
 
 ## Streaming and observability
 
 `POST /v1/chat/stream` emits schema-validated events for run start, agent/tool node state, bounded
 answer deltas, completion, failure, and heartbeat. Events contain counts, timings, and redacted
 previews—not prompts, tokens, system instructions, complete transcripts, or hidden reasoning. The
-same execution and session IDs correlate the session-scoped Run inspector, structured logs, ADK
-spans, and Google Cloud Trace. Server-side run history is intentionally not persisted.
+same execution and session IDs correlate the opt-in Run inspector, structured logs, ADK spans,
+and Google Cloud Trace. Conversation messages are persisted; safe run events remain browser-local.
+
+## Future integrations
+
+The dashed future boundary is limited to replacing Lotus's read-only mock MCP data with live Jira,
+Confluence, Google Calendar, GitHub, and employee-directory adapters. Agent contracts, navigation
+targets, and authorization checks remain unchanged.
 
 ## Security invariants
 

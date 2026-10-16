@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class StrictModel(BaseModel):
@@ -18,7 +18,8 @@ class Route(StrEnum):
 
 
 class AgentName(StrEnum):
-    DATA = "data"
+    DOCUMENTS = "documents"
+    PLANNING = "planning"
     MEETING = "meeting"
     WEB = "web"
     ANOMALY = "anomaly"
@@ -59,6 +60,14 @@ class ChatRequest(StrictModel):
     document_ids: list[str] = Field(default_factory=list, max_length=20)
 
 
+class NavigationTarget(StrictModel):
+    kind: Literal["meeting", "document", "project", "planning_item"]
+    entity_id: str
+    project_id: str | None = None
+    label: str
+    timestamp_ms: int | None = Field(default=None, ge=0)
+
+
 class Scope(StrictModel):
     tenant_id: str
     project_id: str | None = None
@@ -82,6 +91,7 @@ class Evidence(StrictModel):
     meeting_id: str | None = None
     start_ms: int | None = None
     end_ms: int | None = None
+    navigation_target: NavigationTarget | None = None
 
 
 class RouteDecision(StrictModel):
@@ -102,12 +112,27 @@ class ExecutionPlan(StrictModel):
     reason: str
     date_from: datetime | None = None
     date_to: datetime | None = None
+    artifact_request: Literal["mermaid"] | None = None
 
 
 class Artifact(StrictModel):
     artifact_type: Literal["mermaid", "meeting_analysis"]
     title: str
     content: str | dict[str, Any]
+    navigation_target: NavigationTarget | None = None
+
+    @model_validator(mode="after")
+    def validate_mermaid(self):
+        if self.artifact_type != "mermaid":
+            return self
+        if not isinstance(self.content, str):
+            raise ValueError("Mermaid artifact content must be text")
+        if len(self.content) > 12_000:
+            raise ValueError("Mermaid artifact exceeds the size limit")
+        first = self.content.lstrip().splitlines()[0] if self.content.strip() else ""
+        if not first.startswith(("flowchart ", "sequenceDiagram", "stateDiagram")):
+            raise ValueError("Unsupported Mermaid diagram type")
+        return self
 
 
 class SpecialistResult(StrictModel):
@@ -128,6 +153,41 @@ class GroundedAnswer(StrictModel):
     agents_used: list[AgentName] = Field(default_factory=list)
     plan: ExecutionPlan | None = None
     artifacts: list[Artifact] = Field(default_factory=list)
+    navigation_targets: list[NavigationTarget] = Field(default_factory=list)
+    session_id: str | None = None
+
+
+class ChatSessionCreate(StrictModel):
+    project_id: str = Field(default="payments", min_length=1, max_length=128)
+
+
+class ChatSessionSummary(StrictModel):
+    session_id: str
+    title: str
+    project_id: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ChatSessionPage(StrictModel):
+    items: list[ChatSessionSummary]
+    next_cursor: str | None = None
+
+
+class ChatMessageRecord(StrictModel):
+    message_id: str
+    session_id: str
+    role: Literal["user", "assistant"]
+    content: str
+    execution_id: str | None = None
+    status: Literal["running", "completed", "failed"]
+    response: GroundedAnswer | None = None
+    created_at: datetime
+
+
+class ChatSessionDetail(StrictModel):
+    session: ChatSessionSummary
+    messages: list[ChatMessageRecord]
 
 
 class TranscriptSegment(StrictModel):
@@ -177,12 +237,45 @@ class Anomaly(StrictModel):
     evidence_segment_ids: list[str] = Field(default_factory=list)
 
 
+class ClarificationNeeded(StrictModel):
+    kind: Literal["open_question", "anomaly", "decision_conflict"]
+    text: str
+    severity: Literal["low", "medium", "high"] = "medium"
+    evidence_segment_ids: list[str] = Field(default_factory=list)
+
+
 class MeetingAnalysis(StrictModel):
     summary: str
     decisions: list[Decision] = Field(default_factory=list)
     action_items: list[ActionItem] = Field(default_factory=list)
     open_questions: list[str] = Field(default_factory=list)
     anomalies: list[Anomaly] = Field(default_factory=list)
+    clarifications_needed: list[ClarificationNeeded] = Field(default_factory=list)
+
+
+class Employee(StrictModel):
+    employee_id: str
+    name: str
+    email: str
+    designation: str
+    team: str
+    avatar_url: str | None = None
+    timezone: str
+    contact_handle: str
+
+
+class ProjectStakeholder(StrictModel):
+    role: str
+    employee: Employee
+
+
+class WorkspaceProject(StrictModel):
+    project_id: str
+    name: str
+    description: str
+    status: str
+    team: str
+    stakeholders: list[ProjectStakeholder] = Field(default_factory=list)
 
 
 class MeetingAnalysisMetadata(StrictModel):

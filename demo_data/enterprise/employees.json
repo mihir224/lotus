@@ -1,0 +1,8 @@
+[
+  {"tenant_id":"demo","employee_id":"emp-mihir","name":"Mihir Saini","email":"mihir.saini@lotus.example","designation":"Staff Software Engineer","team":"Platform","avatar_url":null,"timezone":"Asia/Kolkata","contact_handle":"@mihir","acl_principals":["group:demo"]},
+  {"tenant_id":"demo","employee_id":"emp-vanshika","name":"Vanshika Yadav","email":"vanshika.yadav@lotus.example","designation":"Product Engineer","team":"Workspace","avatar_url":null,"timezone":"Asia/Kolkata","contact_handle":"@vanshika","acl_principals":["group:demo"]},
+  {"tenant_id":"demo","employee_id":"emp-ananya","name":"Ananya Rao","email":"ananya.rao@lotus.example","designation":"Product Manager","team":"Payments","avatar_url":null,"timezone":"Asia/Kolkata","contact_handle":"@ananya","acl_principals":["group:demo"]},
+  {"tenant_id":"demo","employee_id":"emp-daniel","name":"Daniel Kim","email":"daniel.kim@lotus.example","designation":"Security Architect","team":"Security","avatar_url":null,"timezone":"America/Los_Angeles","contact_handle":"@daniel","acl_principals":["group:demo"]},
+  {"tenant_id":"demo","employee_id":"emp-priya","name":"Priya Nair","email":"priya.nair@lotus.example","designation":"Site Reliability Engineer","team":"Platform","avatar_url":null,"timezone":"Asia/Kolkata","contact_handle":"@priya","acl_principals":["group:demo"]},
+  {"tenant_id":"demo","employee_id":"emp-luis","name":"Luis Ortega","email":"luis.ortega@lotus.example","designation":"Mobile Engineering Lead","team":"Mobile","avatar_url":null,"timezone":"Europe/Madrid","contact_handle":"@luis","acl_principals":["group:demo"]}
+]

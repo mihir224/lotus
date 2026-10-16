@@ -37,7 +37,54 @@ def test_grounded_answer_contains_scope_and_evidence() -> None:
     assert body["route"]["route"] == "knowledge"
     assert body["scope"]["tenant_id"] == "demo"
     assert len(body["evidence"]) >= 2
-    assert body["agents_used"] == ["data", "result"]
+    assert body["agents_used"] == ["documents", "result"]
+    assert body["session_id"]
+    assert any(row["navigation_target"]["kind"] == "document" for row in body["evidence"])
+
+
+def test_chat_history_is_persistent_and_user_scoped() -> None:
+    created = client.post(
+        "/v1/chat/sessions",
+        headers={"X-Lotus-User": "history-owner"},
+        json={"project_id": "payments"},
+    )
+    assert created.status_code == 200
+    session_id = created.json()["session_id"]
+    answer = client.post(
+        "/v1/chat/messages",
+        headers={"X-Lotus-User": "history-owner"},
+        json={
+            "message": "Show the checkout retry architecture",
+            "project_id": "payments",
+            "session_id": session_id,
+        },
+    )
+    assert answer.status_code == 200
+    detail = client.get(
+        f"/v1/chat/sessions/{session_id}", headers={"X-Lotus-User": "history-owner"}
+    )
+    assert [row["role"] for row in detail.json()["messages"]] == ["user", "assistant"]
+    assert client.get(
+        f"/v1/chat/sessions/{session_id}", headers={"X-Lotus-User": "another-user"}
+    ).status_code == 404
+    assert client.delete(
+        f"/v1/chat/sessions/{session_id}", headers={"X-Lotus-User": "history-owner"}
+    ).status_code == 204
+    assert client.get(
+        f"/v1/chat/sessions/{session_id}", headers={"X-Lotus-User": "history-owner"}
+    ).status_code == 404
+
+
+def test_project_stakeholder_question_uses_planning_evidence() -> None:
+    response = client.post(
+        "/v1/chat/messages",
+        json={"message": "Who are the stakeholders for this project?", "project_id": "payments"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agents_used"] == ["planning", "result"]
+    assert "mihir.saini@lotus.example" in body["evidence"][0]["snippet"]
+    assert body["navigation_targets"][0]["kind"] == "project"
 
 
 def test_meeting_search_returns_timestamped_transcript_link() -> None:
@@ -74,6 +121,7 @@ def test_calendar_meeting_can_be_summarized_idempotently() -> None:
     assert first.status_code == second.status_code == 200
     assert first.json()["analysis"] == second.json()["analysis"]
     assert first.json()["transcript"]["segments"][0]["segment_id"] == "m107-s1"
+    assert "clarifications_needed" in first.json()["analysis"]
 
 
 def test_summarize_requires_an_authorized_transcript() -> None:

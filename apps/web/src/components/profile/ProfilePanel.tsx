@@ -10,6 +10,8 @@ type ProfilePanelProps = {
   onClose: () => void;
   onSignOut?: () => void;
   showSignOut: boolean;
+  theme: "dark" | "light";
+  onThemeChange: (theme: "dark" | "light") => void;
 };
 
 export function ProfilePanel({
@@ -17,7 +19,9 @@ export function ProfilePanel({
   profile,
   onClose,
   onSignOut,
-  showSignOut
+  showSignOut,
+  theme,
+  onThemeChange
 }: ProfilePanelProps) {
   const [mounted, setMounted] = useState(open);
   const [closing, setClosing] = useState(false);
@@ -84,6 +88,10 @@ export function ProfilePanel({
               <dd className="profile-panel-mono">{profile.user_id}</dd>
             </div>
           </dl>
+          <label className="setting-row profile-theme-toggle">
+            <span><strong>Dark theme</strong><small>Use Lotus in a low-glare dark appearance.</small></span>
+            <input type="checkbox" checked={theme === "dark"} onChange={(event) => onThemeChange(event.target.checked ? "dark" : "light")} />
+          </label>
         </div>
 
         {showSignOut && onSignOut && (

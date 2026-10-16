@@ -1,6 +1,13 @@
 import re
 
-from .models import ActionItem, Anomaly, Decision, MeetingAnalysis, MeetingTranscriptInput
+from .models import (
+    ActionItem,
+    Anomaly,
+    ClarificationNeeded,
+    Decision,
+    MeetingAnalysis,
+    MeetingTranscriptInput,
+)
 
 DECISION = re.compile(r"\bdecision:\s*(.+)", re.IGNORECASE)
 ACTION = re.compile(r"\baction item:\s*(.+)", re.IGNORECASE)
@@ -56,7 +63,31 @@ def analyze_transcript(transcript: MeetingTranscriptInput) -> MeetingAnalysis:
         action_items=actions,
         open_questions=questions,
         anomalies=anomalies,
+        clarifications_needed=build_clarifications(questions, anomalies),
     )
+
+
+def build_clarifications(
+    open_questions: list[str], anomalies: list[Anomaly]
+) -> list[ClarificationNeeded]:
+    rows = [
+        ClarificationNeeded(kind="open_question", text=question)
+        for question in open_questions
+    ]
+    rows.extend(
+        ClarificationNeeded(
+            kind=(
+                "decision_conflict"
+                if anomaly.anomaly_type == "document_conflict"
+                else "anomaly"
+            ),
+            text=anomaly.description,
+            severity=anomaly.severity,
+            evidence_segment_ids=anomaly.evidence_segment_ids,
+        )
+        for anomaly in anomalies
+    )
+    return rows
 
 
 def detect_content_anomalies(

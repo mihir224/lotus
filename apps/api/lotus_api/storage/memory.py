@@ -1,6 +1,7 @@
 import hashlib
 import json
 import math
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 
@@ -12,12 +13,20 @@ from ..models import (
     BoardIssueItem,
     BoardIssueUpdate,
     CalendarEventItem,
+    ChatMessageRecord,
+    ChatSessionDetail,
+    ChatSessionPage,
+    ChatSessionSummary,
+    Employee,
     Evidence,
     MeetingAnalysis,
     MeetingListItem,
     MeetingRecord,
     MeetingTranscriptInput,
+    NavigationTarget,
+    ProjectStakeholder,
     Scope,
+    WorkspaceProject,
 )
 
 
@@ -43,6 +52,8 @@ class MemoryKnowledgeStore:
         self.transcript_chunks: dict[str, list[dict[str, Any]]] = {}
         self.calendar_events: dict[str, dict[str, Any]] = {}
         self.board_issues: dict[str, dict[str, Any]] = {}
+        self.chat_sessions: dict[str, dict[str, Any]] = {}
+        self.projects: dict[str, WorkspaceProject] = {}
         self.seed()
 
     def ready(self) -> bool:
@@ -111,11 +122,36 @@ class MemoryKnowledgeStore:
                 issue,
                 list(payload.get("acl_principals", ["group:demo"])),
             )
+        employees = {
+            row["employee_id"]: Employee.model_validate(
+                {
+                    key: value
+                    for key, value in row.items()
+                    if key not in {"tenant_id", "acl_principals"}
+                }
+            )
+            for row in self._load("enterprise/employees.json")
+        }
+        for row in self._load("enterprise/projects.json"):
+            self.projects[row["project_id"]] = WorkspaceProject(
+                project_id=row["project_id"],
+                name=row["name"],
+                description=row["description"],
+                status=row["status"],
+                team=row["team"],
+                stakeholders=[
+                    ProjectStakeholder(role=link["role"], employee=employees[link["employee_id"]])
+                    for link in row.get("stakeholders", [])
+                    if link["employee_id"] in employees
+                ],
+            )
         return {
             "documents": len(self.documents),
             "meetings": len(self.meetings),
             "calendar_events": len(calendar_rows),
             "board_issues": len(board_rows),
+            "employees": len(employees),
+            "projects": len(self.projects),
         }
 
     def _index_transcript(self, record: MeetingRecord, principals: list[str]) -> None:
@@ -164,7 +200,7 @@ class MemoryKnowledgeStore:
                 continue
             score = _cosine(query_vector, row["embedding"])
             exact_source = row["source_id"].casefold() in normalized_query
-            if score >= 0.2 or exact_source:
+            if score >= 0.23 or exact_source:
                 scored.append((1.0 if exact_source else score, row))
         scored.sort(key=lambda item: (-item[0], item[1]["source_id"]))
         return [
@@ -185,6 +221,12 @@ class MemoryKnowledgeStore:
                 scope=Scope(tenant_id=auth.tenant_id, project_id=project_id),
                 score=round(score, 4),
                 version=row.get("source_version"),
+                navigation_target=NavigationTarget(
+                    kind="document",
+                    entity_id=row["source_id"],
+                    project_id=project_id,
+                    label=f"Open {row['title']}",
+                ),
             )
             for score, row in scored[:top_k]
         ]
@@ -235,6 +277,13 @@ class MemoryKnowledgeStore:
                 meeting_id=row["meeting_id"],
                 start_ms=row["start_ms"],
                 end_ms=row["end_ms"],
+                navigation_target=NavigationTarget(
+                    kind="meeting",
+                    entity_id=row["meeting_id"],
+                    project_id=project_id,
+                    label=f"Open {row['title']}",
+                    timestamp_ms=row["start_ms"],
+                ),
             )
             for score, row in scored[:top_k]
             if score > 0
@@ -429,3 +478,152 @@ class MemoryKnowledgeStore:
         row["acl_principals"] = list(row.get("acl_principals") or auth.principals)
         self.documents[row["chunk_id"]] = row
         return row
+
+    def create_chat_session(
+        self, auth: AuthContext, project_id: str, session_id: str | None = None
+    ) -> ChatSessionSummary:
+        external_id = session_id or str(uuid.uuid4())
+        existing = self.chat_sessions.get(external_id)
+        if (
+            existing
+            and existing["tenant_id"] == auth.tenant_id
+            and existing["user_id"] == auth.user_id
+        ):
+            return existing["summary"]
+        now = datetime.now(UTC)
+        summary = ChatSessionSummary(
+            session_id=external_id,
+            title="New conversation",
+            project_id=project_id,
+            created_at=now,
+            updated_at=now,
+        )
+        self.chat_sessions[external_id] = {
+            "tenant_id": auth.tenant_id,
+            "user_id": auth.user_id,
+            "summary": summary,
+            "messages": [],
+            "archived": False,
+        }
+        return summary
+
+    def _owned_chat(self, session_id: str, auth: AuthContext) -> dict[str, Any] | None:
+        row = self.chat_sessions.get(session_id)
+        if (
+            not row
+            or row["tenant_id"] != auth.tenant_id
+            or row["user_id"] != auth.user_id
+            or row["archived"]
+        ):
+            return None
+        return row
+
+    def list_chat_sessions(
+        self, auth: AuthContext, limit: int = 30, cursor: str | None = None
+    ) -> ChatSessionPage:
+        rows = [
+            row["summary"]
+            for row in self.chat_sessions.values()
+            if row["tenant_id"] == auth.tenant_id
+            and row["user_id"] == auth.user_id
+            and not row["archived"]
+        ]
+        rows.sort(key=lambda item: item.updated_at, reverse=True)
+        if cursor:
+            cutoff = datetime.fromisoformat(cursor)
+            rows = [row for row in rows if row.updated_at < cutoff]
+        has_more = len(rows) > limit
+        rows = rows[:limit]
+        return ChatSessionPage(
+            items=rows,
+            next_cursor=rows[-1].updated_at.isoformat() if has_more and rows else None,
+        )
+
+    def get_chat_session(
+        self, session_id: str, auth: AuthContext
+    ) -> ChatSessionDetail | None:
+        row = self._owned_chat(session_id, auth)
+        if row is None:
+            return None
+        return ChatSessionDetail(session=row["summary"], messages=list(row["messages"]))
+
+    def archive_chat_session(self, session_id: str, auth: AuthContext) -> bool:
+        row = self._owned_chat(session_id, auth)
+        if row is None:
+            return False
+        row["archived"] = True
+        return True
+
+    def add_chat_message(
+        self,
+        session_id: str,
+        auth: AuthContext,
+        role: str,
+        content: str,
+        status: str,
+        execution_id: str | None = None,
+        response: dict | None = None,
+    ) -> ChatMessageRecord:
+        from ..models import GroundedAnswer
+
+        row = self._owned_chat(session_id, auth)
+        if row is None:
+            raise LookupError(session_id)
+        now = datetime.now(UTC)
+        if role == "user" and not row["messages"]:
+            compact = " ".join(content.split())
+            row["summary"] = row["summary"].model_copy(
+                update={"title": compact[:77] + ("…" if len(compact) > 77 else "")}
+            )
+        row["summary"] = row["summary"].model_copy(update={"updated_at": now})
+        message = ChatMessageRecord(
+            message_id=str(uuid.uuid4()),
+            session_id=session_id,
+            role=role,
+            content=content,
+            execution_id=execution_id,
+            status=status,
+            response=GroundedAnswer.model_validate(response) if response else None,
+            created_at=now,
+        )
+        row["messages"].append(message)
+        return message
+
+    def update_chat_message_status(
+        self, message_id: str, auth: AuthContext, status: str
+    ) -> None:
+        for row in self.chat_sessions.values():
+            if row["tenant_id"] != auth.tenant_id or row["user_id"] != auth.user_id:
+                continue
+            row["messages"] = [
+                item.model_copy(update={"status": status})
+                if item.message_id == message_id
+                else item
+                for item in row["messages"]
+            ]
+
+    def get_chat_context(
+        self, session_id: str, auth: AuthContext, limit: int = 12, max_chars: int = 16_000
+    ) -> list[ChatMessageRecord]:
+        detail = self.get_chat_session(session_id, auth)
+        if detail is None:
+            return []
+        result: list[ChatMessageRecord] = []
+        used = 0
+        for item in reversed(detail.messages):
+            if item.status != "completed":
+                continue
+            if result and used + len(item.content) > max_chars:
+                break
+            result.append(item)
+            used += len(item.content)
+            if len(result) >= limit:
+                break
+        return list(reversed(result))
+
+    def get_workspace_project(
+        self, project_id: str, auth: AuthContext
+    ) -> WorkspaceProject | None:
+        if auth.tenant_id != "demo" or "group:demo" not in auth.principals:
+            return None
+        return self.projects.get(project_id)

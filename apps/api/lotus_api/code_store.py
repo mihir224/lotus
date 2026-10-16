@@ -5,8 +5,8 @@ from typing import Any
 from .models import AuthContext, Evidence, Scope
 
 
-class MockCodeStore:
-    """Read-only, ACL-aware repository fixture adapter."""
+class CodeStore:
+    """Read-only, ACL-aware repository adapter backed by demo data."""
 
     def __init__(self, fixture_dir):
         self.repositories: list[dict[str, Any]] = json.loads(
@@ -69,13 +69,13 @@ class MockCodeStore:
                                 score,
                                 Evidence(
                                     source_id=f"{repo['repository_id']}:{path}:{line_number}",
-                                    source_system="github_mock",
+                                    source_system="github",
                                     source_type="code",
                                     title=f"{repo['name']} · {path}",
                                     uri=f"fixture://github/{repo['repository_id']}/{path}#L{line_number}",
                                     snippet=line[:500],
                                     section=f"{path}:{line_number}",
-                                    retrieval_method="mock_code_search",
+                                    retrieval_method="repository_search",
                                     scope=Scope(
                                         tenant_id=auth.tenant_id,
                                         project_id=project_id,

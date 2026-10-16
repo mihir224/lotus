@@ -31,7 +31,13 @@ function matchesFilters(
   );
 }
 
-export function WorkBoardView() {
+export function WorkBoardView({
+  initialProjectId,
+  initialIssueKey
+}: {
+  initialProjectId?: string | null;
+  initialIssueKey?: string | null;
+}) {
   const [data, setData] = useState<WorkBoardPayload | null>(null);
   const [teamId, setTeamId] = useState<string>("platform");
   const [loading, setLoading] = useState(true);
@@ -47,7 +53,7 @@ export function WorkBoardView() {
     setLoading(true);
     setError(null);
     try {
-      const board = await fetchWorkBoard(projectId ?? "payments", nextTeamId);
+      const board = await fetchWorkBoard(projectId ?? initialProjectId ?? "payments", nextTeamId);
       setData(board);
       if (!projectId) setTeamId(nextTeamId);
     } catch (reason) {
@@ -55,11 +61,17 @@ export function WorkBoardView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [initialProjectId]);
 
   useEffect(() => {
     void load(teamId);
   }, [teamId, load]);
+
+  useEffect(() => {
+    if (!initialIssueKey || !data) return;
+    const issue = data.issues.find((row) => row.issue_key === initialIssueKey);
+    if (issue) setSelectedIssue(issue);
+  }, [data, initialIssueKey]);
 
   const assigneeById = useMemo(() => {
     const map = new Map<string, BoardAssignee>();

@@ -170,3 +170,88 @@ class TranscriptEmbeddingRow(Base):
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     embedding_model: Mapped[str] = mapped_column(String(160), nullable=False)
     embedding: Mapped[list[float]] = mapped_column(Vector(VECTOR_DIMENSIONS), nullable=False)
+
+
+class ChatSessionRow(Base):
+    __tablename__ = "chat_sessions"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "user_id", "session_id"),
+        Index("ix_chat_session_owner_updated", "tenant_id", "user_id", "updated_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    tenant_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    title: Mapped[str] = mapped_column(String(240), nullable=False)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ChatMessageRow(Base):
+    __tablename__ = "chat_messages"
+    __table_args__ = (
+        UniqueConstraint("session_id", "message_id"),
+        Index("ix_chat_message_session_created", "session_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    message_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    execution_id: Mapped[str | None] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    response_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class WorkspaceProjectRow(Base):
+    __tablename__ = "workspace_projects"
+    __table_args__ = (UniqueConstraint("tenant_id", "project_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
+    team: Mapped[str] = mapped_column(String(120), nullable=False)
+    acl_principals: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class EmployeeRow(Base):
+    __tablename__ = "employees"
+    __table_args__ = (UniqueConstraint("tenant_id", "employee_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    employee_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    designation: Mapped[str] = mapped_column(String(200), nullable=False)
+    team: Mapped[str] = mapped_column(String(120), nullable=False)
+    avatar_url: Mapped[str | None] = mapped_column(Text)
+    timezone: Mapped[str] = mapped_column(String(80), nullable=False)
+    contact_handle: Mapped[str] = mapped_column(String(160), nullable=False)
+    acl_principals: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ProjectStakeholderRow(Base):
+    __tablename__ = "project_stakeholders"
+    __table_args__ = (UniqueConstraint("project_id", "employee_id", "role"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspace_projects.id", ondelete="CASCADE"), nullable=False
+    )
+    employee_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("employees.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(120), nullable=False)

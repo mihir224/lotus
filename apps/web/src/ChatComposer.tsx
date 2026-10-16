@@ -27,7 +27,7 @@ export function ChatComposer({
     <form className="composer" onSubmit={submit}>
       <textarea
         aria-label="Ask Lotus"
-        placeholder="Ask about documents, meetings, public research, or mock code…"
+        placeholder="Ask about projects, documents, meetings, research, or code…"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}

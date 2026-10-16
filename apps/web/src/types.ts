@@ -9,6 +9,15 @@ export type Evidence = {
   updated_at: string | null;
   retrieval_method: string;
   score: number | null;
+  navigation_target?: NavigationTarget | null;
+};
+
+export type NavigationTarget = {
+  kind: "meeting" | "document" | "project" | "planning_item";
+  entity_id: string;
+  project_id: string | null;
+  label: string;
+  timestamp_ms: number | null;
 };
 
 export type CalendarEvent = {
@@ -31,6 +40,13 @@ export type MeetingAnalysis = {
   decisions: { text: string }[];
   action_items: { text: string; owner: string | null; due_date: string | null }[];
   open_questions: string[];
+  anomalies?: { anomaly_type: string; severity: string; description: string; evidence_segment_ids: string[] }[];
+  clarifications_needed?: {
+    kind: "open_question" | "anomaly" | "decision_conflict";
+    text: string;
+    severity: "low" | "medium" | "high";
+    evidence_segment_ids: string[];
+  }[];
 };
 
 export type MeetingRecord = {
@@ -38,6 +54,7 @@ export type MeetingRecord = {
   transcript: {
     recording_url: string | null;
     title: string;
+    started_at: string;
     participants: string[];
     language_code: string;
     segments: {
@@ -76,8 +93,31 @@ export type GroundedAnswer = {
     date_from: string | null;
     date_to: string | null;
   } | null;
-  artifacts: { artifact_type: string; title: string; content: string | object }[];
+  artifacts: { artifact_type: string; title: string; content: string | object; navigation_target?: NavigationTarget | null }[];
+  navigation_targets: NavigationTarget[];
+  session_id: string | null;
 };
+
+export type ChatMessage = {
+  message_id: string;
+  session_id: string;
+  role: "user" | "assistant";
+  content: string;
+  execution_id: string | null;
+  status: "running" | "completed" | "failed";
+  response: GroundedAnswer | null;
+  created_at: string;
+};
+
+export type ChatSession = {
+  session_id: string;
+  title: string;
+  project_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ChatSessionDetail = { session: ChatSession; messages: ChatMessage[] };
 
 export type RunEvent = {
   event_type: "run.started" | "node.started" | "node.completed" | "node.failed" |

@@ -22,7 +22,7 @@ function formatUpdated(value: string | null): string {
   });
 }
 
-export function DocsView() {
+export function DocsView({ initialDocumentId }: { initialDocumentId?: string | null }) {
   const [catalog, setCatalog] = useState<DocCatalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +69,10 @@ export function DocsView() {
       setPageLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (initialDocumentId) void openPage(initialDocumentId);
+  }, [initialDocumentId, openPage]);
 
   useEffect(() => {
     const needle = search.trim();

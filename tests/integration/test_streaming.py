@@ -26,20 +26,20 @@ def test_stream_orders_planner_tools_result_and_answer() -> None:
         for index, event in enumerate(events)
         if event["event_type"] == "node.completed" and event["node_id"] == "planner"
     )
-    data_started = next(
+    documents_started = next(
         index
         for index, event in enumerate(events)
-        if event["event_type"] == "node.started" and event["node_id"] == "data"
+        if event["event_type"] == "node.started" and event["node_id"] == "documents"
     )
     result_started = next(
         index
         for index, event in enumerate(events)
         if event["event_type"] == "node.started" and event["node_id"] == "result"
     )
-    data_done = next(
+    documents_done = next(
         index
         for index, event in enumerate(events)
-        if event["event_type"] == "node.completed" and event["node_id"] == "data"
+        if event["event_type"] == "node.completed" and event["node_id"] == "documents"
     )
-    assert planner_done < data_started < data_done < result_started
+    assert planner_done < documents_started < documents_done < result_started
     assert events[-1]["response"]["execution_id"] == events[0]["execution_id"]

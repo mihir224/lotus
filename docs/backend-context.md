@@ -11,15 +11,15 @@
 ## Orchestration contract
 
 `agents/orchestrator.py` owns controlled execution. In `agent_platform` mode, the Google ADK
-Planner produces an `ExecutionPlan`; independent Data, Meeting, and Web work runs concurrently;
+Planner produces an `ExecutionPlan`; independent Documents, Planning, Meeting, and Web work runs concurrently;
 Anomaly runs only after Meeting; Result runs last. A conversational request may validly use only
-Result. If Planner times out, use the safe Result-only degraded plan—never retrieve arbitrary Data.
+Result. If Planner times out, use the safe Result-only degraded plan—never retrieve arbitrary data.
 
 Current live boundaries:
 
 - Planner and Result are ADK/Gemini agents.
 - Web uses the ADK Google Search tool and converts grounding metadata to `Evidence`.
-- Data and Meeting execute authorized Python retrieval selected by the Planner.
+- Documents, Planning, and Meeting are ADK specialists using scoped internal Streamable HTTP MCP tools.
 - Anomaly reads stored meeting analysis; deterministic transcript analysis lives in
   `meeting_analysis.py`.
 - Every ADK call has a bounded timeout. Preserve safe fallbacks and related logs.
@@ -29,13 +29,15 @@ and deterministic answer composition. Do not make fixture tests call Google.
 
 ## Storage invariants
 
-PostgreSQL + pgvector has five application tables created across the Alembic migration chain:
+PostgreSQL + pgvector stores retrieval, workspace, and conversation state, including:
 
 - `document_embeddings`
 - `meeting_transcripts`
 - `transcript_embeddings`
 - `calendar_events`
 - `board_issues`
+- `chat_sessions` and `chat_messages`
+- `workspace_projects`, `employees`, and `project_stakeholders`
 
 Both vector tables use normalized 768-dimensional vectors. Never rank rows created by a different
 `embedding_model`. Every search MUST filter tenant, project, ACL overlap, and active model before

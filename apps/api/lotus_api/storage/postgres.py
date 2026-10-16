@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 
@@ -16,20 +17,33 @@ from ..models import (
     BoardIssueItem,
     BoardIssueUpdate,
     CalendarEventItem,
+    ChatMessageRecord,
+    ChatSessionDetail,
+    ChatSessionPage,
+    ChatSessionSummary,
+    Employee,
     Evidence,
     MeetingAnalysis,
     MeetingAnalysisMetadata,
     MeetingListItem,
     MeetingRecord,
     MeetingTranscriptInput,
+    NavigationTarget,
+    ProjectStakeholder,
     Scope,
+    WorkspaceProject,
 )
 from .models import (
     BoardIssueRow,
     CalendarEventRow,
+    ChatMessageRow,
+    ChatSessionRow,
     DocumentEmbeddingRow,
+    EmployeeRow,
     MeetingTranscriptRow,
+    ProjectStakeholderRow,
     TranscriptEmbeddingRow,
+    WorkspaceProjectRow,
 )
 
 logger = logging.getLogger("uvicorn.error.lotus.database")
@@ -141,11 +155,67 @@ class PostgresKnowledgeStore:
                 issue,
                 list(payload.get("acl_principals", ["group:demo"])),
             )
+        people = self._load("enterprise/employees.json")
+        projects = self._load("enterprise/projects.json")
+        now = datetime.now(UTC)
+        with Session(self.engine) as session:
+            employee_rows: dict[str, EmployeeRow] = {}
+            for payload in people:
+                row = session.scalar(
+                    select(EmployeeRow).where(
+                        EmployeeRow.tenant_id == payload["tenant_id"],
+                        EmployeeRow.employee_id == payload["employee_id"],
+                    )
+                )
+                values = {**payload, "updated_at": now}
+                if row is None:
+                    row = EmployeeRow(**values)
+                    session.add(row)
+                    session.flush()
+                else:
+                    for key, value in values.items():
+                        setattr(row, key, value)
+                employee_rows[payload["employee_id"]] = row
+            for payload in projects:
+                stakeholders = payload.get("stakeholders", [])
+                values = {key: value for key, value in payload.items() if key != "stakeholders"}
+                values["updated_at"] = now
+                row = session.scalar(
+                    select(WorkspaceProjectRow).where(
+                        WorkspaceProjectRow.tenant_id == payload["tenant_id"],
+                        WorkspaceProjectRow.project_id == payload["project_id"],
+                    )
+                )
+                if row is None:
+                    row = WorkspaceProjectRow(**values)
+                    session.add(row)
+                    session.flush()
+                else:
+                    for key, value in values.items():
+                        setattr(row, key, value)
+                session.execute(
+                    delete(ProjectStakeholderRow).where(
+                        ProjectStakeholderRow.project_id == row.id
+                    )
+                )
+                for link in stakeholders:
+                    employee = employee_rows.get(link["employee_id"])
+                    if employee:
+                        session.add(
+                            ProjectStakeholderRow(
+                                project_id=row.id,
+                                employee_id=employee.id,
+                                role=link["role"],
+                            )
+                        )
+            session.commit()
         return {
             "documents": len(documents),
             "meetings": len(self._load("meetings/meetings.json")),
             "calendar_events": len(calendar_rows),
             "board_issues": len(board_rows),
+            "employees": len(people),
+            "projects": len(projects),
         }
 
     def search_documents(
@@ -167,7 +237,7 @@ class PostgresKnowledgeStore:
             DocumentEmbeddingRow.project_id == project_id,
             DocumentEmbeddingRow.acl_principals.op("&&")(list(auth.principals)),
             DocumentEmbeddingRow.embedding_model == self.embedder.model_id,
-            (vector_distance <= 0.8) | exact_source,
+            (vector_distance <= 0.77) | exact_source,
         )
         if source_types:
             statement = statement.where(DocumentEmbeddingRow.source_type.in_(source_types))
@@ -189,6 +259,12 @@ class PostgresKnowledgeStore:
                 scope=Scope(tenant_id=auth.tenant_id, project_id=project_id),
                 score=round(max(0.0, 1.0 - float(distance_value)), 4),
                 version=row.source_version,
+                navigation_target=NavigationTarget(
+                    kind="document",
+                    entity_id=row.source_id,
+                    project_id=project_id,
+                    label=f"Open {row.title}",
+                ),
             )
             for row, distance_value in rows
         ]
@@ -248,6 +324,13 @@ class PostgresKnowledgeStore:
                 meeting_id=chunk.meeting_id,
                 start_ms=chunk.start_ms,
                 end_ms=chunk.end_ms,
+                navigation_target=NavigationTarget(
+                    kind="meeting",
+                    entity_id=chunk.meeting_id,
+                    project_id=project_id,
+                    label=f"Open {meeting.title}",
+                    timestamp_ms=chunk.start_ms,
+                ),
             )
             for chunk, meeting, distance_value in rows
         ]
@@ -681,3 +764,246 @@ class PostgresKnowledgeStore:
             session.commit()
             session.refresh(row)
             return self._document_row_to_dict(row)
+
+    @staticmethod
+    def _session_summary(row: ChatSessionRow) -> ChatSessionSummary:
+        return ChatSessionSummary(
+            session_id=row.session_id,
+            title=row.title,
+            project_id=row.project_id,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
+
+    @staticmethod
+    def _message_record(row: ChatMessageRow, external_session_id: str) -> ChatMessageRecord:
+        from ..models import GroundedAnswer
+
+        response = GroundedAnswer.model_validate(row.response_json) if row.response_json else None
+        return ChatMessageRecord(
+            message_id=row.message_id,
+            session_id=external_session_id,
+            role=row.role,
+            content=row.content,
+            execution_id=row.execution_id,
+            status=row.status,
+            response=response,
+            created_at=row.created_at,
+        )
+
+    def create_chat_session(
+        self, auth: AuthContext, project_id: str, session_id: str | None = None
+    ) -> ChatSessionSummary:
+        external_id = session_id or str(uuid.uuid4())
+        now = datetime.now(UTC)
+        with Session(self.engine) as session:
+            row = session.scalar(
+                select(ChatSessionRow).where(
+                    ChatSessionRow.tenant_id == auth.tenant_id,
+                    ChatSessionRow.user_id == auth.user_id,
+                    ChatSessionRow.session_id == external_id,
+                    ChatSessionRow.archived_at.is_(None),
+                )
+            )
+            if row is None:
+                row = ChatSessionRow(
+                    session_id=external_id,
+                    tenant_id=auth.tenant_id,
+                    user_id=auth.user_id,
+                    project_id=project_id,
+                    title="New conversation",
+                    created_at=now,
+                    updated_at=now,
+                )
+                session.add(row)
+                session.commit()
+                session.refresh(row)
+            return self._session_summary(row)
+
+    def list_chat_sessions(
+        self, auth: AuthContext, limit: int = 30, cursor: str | None = None
+    ) -> ChatSessionPage:
+        statement = select(ChatSessionRow).where(
+            ChatSessionRow.tenant_id == auth.tenant_id,
+            ChatSessionRow.user_id == auth.user_id,
+            ChatSessionRow.archived_at.is_(None),
+        )
+        if cursor:
+            statement = statement.where(ChatSessionRow.updated_at < datetime.fromisoformat(cursor))
+        statement = statement.order_by(ChatSessionRow.updated_at.desc()).limit(limit + 1)
+        with Session(self.engine) as session:
+            rows = list(session.scalars(statement).all())
+        has_more = len(rows) > limit
+        rows = rows[:limit]
+        return ChatSessionPage(
+            items=[self._session_summary(row) for row in rows],
+            next_cursor=rows[-1].updated_at.isoformat() if has_more and rows else None,
+        )
+
+    def get_chat_session(
+        self, session_id: str, auth: AuthContext
+    ) -> ChatSessionDetail | None:
+        with Session(self.engine) as session:
+            row = session.scalar(
+                select(ChatSessionRow).where(
+                    ChatSessionRow.tenant_id == auth.tenant_id,
+                    ChatSessionRow.user_id == auth.user_id,
+                    ChatSessionRow.session_id == session_id,
+                    ChatSessionRow.archived_at.is_(None),
+                )
+            )
+            if row is None:
+                return None
+            messages = session.scalars(
+                select(ChatMessageRow)
+                .where(ChatMessageRow.session_id == row.id)
+                .order_by(ChatMessageRow.created_at)
+            ).all()
+            return ChatSessionDetail(
+                session=self._session_summary(row),
+                messages=[self._message_record(item, row.session_id) for item in messages],
+            )
+
+    def archive_chat_session(self, session_id: str, auth: AuthContext) -> bool:
+        with Session(self.engine) as session:
+            row = session.scalar(
+                select(ChatSessionRow).where(
+                    ChatSessionRow.tenant_id == auth.tenant_id,
+                    ChatSessionRow.user_id == auth.user_id,
+                    ChatSessionRow.session_id == session_id,
+                    ChatSessionRow.archived_at.is_(None),
+                )
+            )
+            if row is None:
+                return False
+            row.archived_at = datetime.now(UTC)
+            session.commit()
+            return True
+
+    def add_chat_message(
+        self,
+        session_id: str,
+        auth: AuthContext,
+        role: str,
+        content: str,
+        status: str,
+        execution_id: str | None = None,
+        response: dict | None = None,
+    ) -> ChatMessageRecord:
+        now = datetime.now(UTC)
+        with Session(self.engine) as session:
+            parent = session.scalar(
+                select(ChatSessionRow).where(
+                    ChatSessionRow.tenant_id == auth.tenant_id,
+                    ChatSessionRow.user_id == auth.user_id,
+                    ChatSessionRow.session_id == session_id,
+                    ChatSessionRow.archived_at.is_(None),
+                )
+            )
+            if parent is None:
+                raise LookupError(session_id)
+            message_count = session.scalar(
+                select(func.count()).select_from(ChatMessageRow).where(
+                    ChatMessageRow.session_id == parent.id
+                )
+            )
+            if role == "user" and message_count == 0:
+                compact = " ".join(content.split())
+                parent.title = compact[:77] + ("…" if len(compact) > 77 else "")
+            parent.updated_at = now
+            row = ChatMessageRow(
+                message_id=str(uuid.uuid4()),
+                session_id=parent.id,
+                role=role,
+                content=content,
+                execution_id=execution_id,
+                status=status,
+                response_json=response,
+                created_at=now,
+            )
+            session.add(row)
+            session.commit()
+            session.refresh(row)
+            return self._message_record(row, parent.session_id)
+
+    def update_chat_message_status(
+        self, message_id: str, auth: AuthContext, status: str
+    ) -> None:
+        with Session(self.engine) as session:
+            row = session.scalar(
+                select(ChatMessageRow)
+                .join(ChatSessionRow, ChatMessageRow.session_id == ChatSessionRow.id)
+                .where(
+                    ChatMessageRow.message_id == message_id,
+                    ChatSessionRow.tenant_id == auth.tenant_id,
+                    ChatSessionRow.user_id == auth.user_id,
+                )
+            )
+            if row:
+                row.status = status
+                session.commit()
+
+    def get_chat_context(
+        self, session_id: str, auth: AuthContext, limit: int = 12, max_chars: int = 16_000
+    ) -> list[ChatMessageRecord]:
+        detail = self.get_chat_session(session_id, auth)
+        if detail is None:
+            return []
+        chosen: list[ChatMessageRecord] = []
+        used = 0
+        for item in reversed(detail.messages):
+            if item.status != "completed":
+                continue
+            size = len(item.content)
+            if chosen and used + size > max_chars:
+                break
+            chosen.append(item)
+            used += size
+            if len(chosen) >= limit:
+                break
+        return list(reversed(chosen))
+
+    def get_workspace_project(
+        self, project_id: str, auth: AuthContext
+    ) -> WorkspaceProject | None:
+        with Session(self.engine) as session:
+            project = session.scalar(
+                select(WorkspaceProjectRow).where(
+                    WorkspaceProjectRow.tenant_id == auth.tenant_id,
+                    WorkspaceProjectRow.project_id == project_id,
+                    WorkspaceProjectRow.acl_principals.op("&&")(list(auth.principals)),
+                )
+            )
+            if project is None:
+                return None
+            links = session.execute(
+                select(ProjectStakeholderRow, EmployeeRow)
+                .join(EmployeeRow, ProjectStakeholderRow.employee_id == EmployeeRow.id)
+                .where(
+                    ProjectStakeholderRow.project_id == project.id,
+                    EmployeeRow.acl_principals.op("&&")(list(auth.principals)),
+                )
+            ).all()
+        return WorkspaceProject(
+            project_id=project.project_id,
+            name=project.name,
+            description=project.description,
+            status=project.status,
+            team=project.team,
+            stakeholders=[
+                ProjectStakeholder(
+                    role=link.role,
+                    employee=Employee(
+                        employee_id=employee.employee_id,
+                        name=employee.name,
+                        email=employee.email,
+                        designation=employee.designation,
+                        team=employee.team,
+                        avatar_url=employee.avatar_url,
+                        timezone=employee.timezone,
+                        contact_handle=employee.contact_handle,
+                    ),
+                )
+                for link, employee in links
+            ],
+        )

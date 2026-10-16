@@ -33,22 +33,34 @@ def fixture_plan(request: ChatRequest, now: datetime | None = None) -> Execution
         "function",
         "source file",
     )
-    data_signals = (
+    document_signals = (
         "document",
         "documentation",
         "architecture",
         "runbook",
         "product",
-        "jira",
         "confluence",
         "sharepoint",
         "github",
         "similar work",
         "diagram",
     )
+    planning_signals = (
+        "jira",
+        "project",
+        "planner",
+        "ticket",
+        "issue",
+        "stakeholder",
+        "owner",
+        "contact",
+        "who works",
+    )
     steps: list[PlanStep] = []
-    if any(signal in message for signal in data_signals):
-        steps.append(PlanStep(agent=AgentName.DATA, intent=request.message))
+    if any(signal in message for signal in document_signals):
+        steps.append(PlanStep(agent=AgentName.DOCUMENTS, intent=request.message))
+    if request.planning_item_ids or any(signal in message for signal in planning_signals):
+        steps.append(PlanStep(agent=AgentName.PLANNING, intent=request.message))
     if request.meeting_id or any(signal in message for signal in meeting_signals):
         steps.append(PlanStep(agent=AgentName.MEETING, intent=request.message))
     elif " call " in f" {message} ":
@@ -76,7 +88,7 @@ def fixture_plan(request: ChatRequest, now: datetime | None = None) -> Execution
                 steps=steps,
                 reason="No enterprise retrieval was needed; Result can answer conversationally.",
             )
-        steps.append(PlanStep(agent=AgentName.DATA, intent=request.message))
+        steps.append(PlanStep(agent=AgentName.DOCUMENTS, intent=request.message))
 
     anomaly_requested = any(
         signal in message for signal in ("anomaly", "open question", "action item", "gap")
@@ -104,4 +116,9 @@ def fixture_plan(request: ChatRequest, now: datetime | None = None) -> Execution
         reason="Planner selected agents from the request and available scope.",
         date_from=date_from,
         date_to=date_to,
+        artifact_request=(
+            "mermaid"
+            if "diagram" in message or "flowchart" in message or "architecture flow" in message
+            else None
+        ),
     )

@@ -7,10 +7,15 @@ from ..models import (
     BoardIssueItem,
     BoardIssueUpdate,
     CalendarEventItem,
+    ChatMessageRecord,
+    ChatSessionDetail,
+    ChatSessionPage,
+    ChatSessionSummary,
     Evidence,
     MeetingListItem,
     MeetingRecord,
     MeetingTranscriptInput,
+    WorkspaceProject,
 )
 
 
@@ -106,3 +111,40 @@ class KnowledgeStore(Protocol):
         auth: AuthContext,
         payload: dict,
     ) -> dict: ...
+
+    def create_chat_session(
+        self, auth: AuthContext, project_id: str, session_id: str | None = None
+    ) -> ChatSessionSummary: ...
+
+    def list_chat_sessions(
+        self, auth: AuthContext, limit: int = 30, cursor: str | None = None
+    ) -> ChatSessionPage: ...
+
+    def get_chat_session(
+        self, session_id: str, auth: AuthContext
+    ) -> ChatSessionDetail | None: ...
+
+    def archive_chat_session(self, session_id: str, auth: AuthContext) -> bool: ...
+
+    def add_chat_message(
+        self,
+        session_id: str,
+        auth: AuthContext,
+        role: str,
+        content: str,
+        status: str,
+        execution_id: str | None = None,
+        response: dict | None = None,
+    ) -> ChatMessageRecord: ...
+
+    def update_chat_message_status(
+        self, message_id: str, auth: AuthContext, status: str
+    ) -> None: ...
+
+    def get_chat_context(
+        self, session_id: str, auth: AuthContext, limit: int = 12, max_chars: int = 16_000
+    ) -> list[ChatMessageRecord]: ...
+
+    def get_workspace_project(
+        self, project_id: str, auth: AuthContext
+    ) -> WorkspaceProject | None: ...

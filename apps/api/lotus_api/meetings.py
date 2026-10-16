@@ -8,7 +8,7 @@ from google.genai import types
 
 from .agents.registry import build_meeting_analysis_agent
 from .config import get_settings
-from .meeting_analysis import analyze_transcript, detect_content_anomalies
+from .meeting_analysis import analyze_transcript, build_clarifications, detect_content_anomalies
 from .models import (
     AuthContext,
     MeetingAnalysis,
@@ -52,6 +52,9 @@ async def _live_analysis(transcript: MeetingTranscriptInput) -> MeetingAnalysis:
     transcript_text = " ".join(segment.text for segment in transcript.segments)
     analysis.anomalies = detect_content_anomalies(
         analysis.action_items, analysis.open_questions, transcript_text
+    )
+    analysis.clarifications_needed = build_clarifications(
+        analysis.open_questions, analysis.anomalies
     )
     return analysis
 

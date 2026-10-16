@@ -1,16 +1,16 @@
 from pathlib import Path
 
 import pytest
-from lotus_api.code_store import MockCodeStore
+from lotus_api.code_store import CodeStore
 from lotus_api.models import AuthContext
 
 
 @pytest.fixture
-def code_store() -> MockCodeStore:
-    return MockCodeStore(Path("demo_data"))
+def code_store() -> CodeStore:
+    return CodeStore(Path("demo_data"))
 
 
-def test_code_search_returns_file_line_citations(code_store: MockCodeStore) -> None:
+def test_code_search_returns_file_line_citations(code_store: CodeStore) -> None:
     auth = AuthContext(tenant_id="demo", user_id="alice", principals=("group:demo",))
     evidence = code_store.search("full jitter retry", auth, "payments")
     assert evidence
@@ -19,7 +19,7 @@ def test_code_search_returns_file_line_citations(code_store: MockCodeStore) -> N
 
 
 def test_code_store_rejects_traversal_and_unauthorized_repositories(
-    code_store: MockCodeStore,
+    code_store: CodeStore,
 ) -> None:
     auth = AuthContext(tenant_id="demo", user_id="alice", principals=("group:demo",))
     with pytest.raises(ValueError, match="Invalid"):

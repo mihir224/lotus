@@ -9,10 +9,12 @@ chat; `CalendarView.tsx` owns calendar, recording, summary, and transcript exper
 ## UI rules
 
 - MUST keep one unified workspace; do not add a mode selector for agent routing.
-- MUST preserve the Planner/Specialists/Result visualization as explanatory UI, not user control.
+- MUST show the Planner/Specialists/Result inspector only when local Debug Mode is enabled.
 - MUST render evidence provenance and uncertainty returned by the backend.
 - MUST fetch calendar and transcript data through `/v1`; never import `demo_data` in the frontend.
 - MUST keep Summarize beside View recording and use the backend meeting contract.
+- MUST preserve server-backed multi-turn chat history and structured in-app navigation targets.
+- MUST keep dark as the default theme while retaining the profile light-theme toggle.
 - MUST keep layouts functional at the existing desktop and mobile breakpoints.
 
 ## Authentication flow

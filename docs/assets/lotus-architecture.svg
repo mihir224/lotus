@@ -1,18 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="820" viewBox="0 0 1400 820">
-  <rect width="1400" height="820" fill="#f4f1e8"/>
-  <style>.t{font:600 22px Arial;fill:#183329}.s{font:16px Arial;fill:#53625a}.b{fill:#fffdf8;stroke:#87a896;stroke-width:2}.a{fill:#dcecdf;stroke:#397257;stroke-width:2}.l{stroke:#648575;stroke-width:3;fill:none;marker-end:url(#m)}</style>
-  <defs><marker id="m" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#648575"/></marker></defs>
-  <text x="60" y="62" class="t" font-size="32">Lotus enterprise agent architecture</text>
-  <rect x="60" y="120" rx="18" width="220" height="90" class="a"/><text x="108" y="160" class="t">React workspace</text><text x="95" y="188" class="s">Markdown · Evidence · Run</text>
-  <rect x="350" y="120" rx="18" width="230" height="90" class="b"/><text x="393" y="160" class="t">Cloud Run API</text><text x="405" y="188" class="s">FastAPI · SSE · Auth</text>
-  <rect x="650" y="120" rx="18" width="220" height="90" class="a"/><text x="694" y="160" class="t">ADK Planner</text><text x="693" y="188" class="s">validated execution plan</text>
-  <path d="M280 165H350" class="l"/><path d="M580 165H650" class="l"/>
-  <g><rect x="160" y="310" rx="16" width="190" height="80" class="b"/><text x="205" y="355" class="t">Data Agent</text><rect x="410" y="310" rx="16" width="190" height="80" class="b"/><text x="440" y="355" class="t">Meeting Agent</text><rect x="660" y="310" rx="16" width="190" height="80" class="b"/><text x="695" y="355" class="t">Web Agent</text><rect x="910" y="310" rx="16" width="190" height="80" class="b"/><text x="945" y="355" class="t">Code Agent</text></g>
-  <path d="M760 210L255 310" class="l"/><path d="M760 210L505 310" class="l"/><path d="M760 210L755 310" class="l"/><path d="M760 210L1005 310" class="l"/>
-  <rect x="515" y="500" rx="18" width="240" height="90" class="a"/><text x="574" y="540" class="t">Result Agent</text><text x="558" y="568" class="s">grounded final response</text>
-  <path d="M255 390L575 500" class="l"/><path d="M505 390L610 500" class="l"/><path d="M755 390L680 500" class="l"/><path d="M1005 390L720 500" class="l"/>
-  <rect x="1040" y="120" rx="18" width="280" height="90" class="b"/><text x="1088" y="160" class="t">Google Cloud Trace</text><text x="1082" y="188" class="s">metadata only · no content</text><path d="M580 145H1040" class="l"/>
-  <rect x="180" y="680" rx="16" width="350" height="70" class="b"/><text x="221" y="711" class="t">Cloud SQL PostgreSQL</text><text x="252" y="738" class="s">persistent state · pgvector</text>
-  <rect x="750" y="680" rx="16" width="340" height="70" class="b"/><text x="801" y="711" class="t">Cloud Run Jobs</text><text x="798" y="738" class="s">Alembic migration · seed</text>
-  <path d="M255 390L300 680" class="l"/><path d="M505 390L410 680" class="l"/><path d="M920 680L530 715" class="l"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="920" viewBox="0 0 1500 920">
+  <rect width="1500" height="920" fill="#0b0f0e"/>
+  <style>.t{font:600 20px Arial;fill:#e7ece9}.s{font:14px Arial;fill:#9eaaa4}.b{fill:#131a17;stroke:#34443d;stroke-width:2}.a{fill:#173b2d;stroke:#69d4a2;stroke-width:2}.f{fill:#17151c;stroke:#796c8b;stroke-width:2;stroke-dasharray:8 6}.l{stroke:#5b766a;stroke-width:2.5;fill:none;marker-end:url(#m)}</style>
+  <defs><marker id="m" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#69d4a2"/></marker></defs>
+  <text x="55" y="58" class="t" font-size="32">Lotus conversational workspace architecture</text>
+  <rect x="55" y="100" rx="18" width="245" height="90" class="a"/><text x="101" y="139" class="t">React workspace</text><text x="78" y="168" class="s">Chat history · SSE · Navigation</text>
+  <rect x="355" y="100" rx="18" width="235" height="90" class="b"/><text x="404" y="139" class="t">Cloud Run API</text><text x="402" y="168" class="s">FastAPI · OAuth · ADK</text>
+  <rect x="650" y="100" rx="18" width="210" height="90" class="a"/><text x="700" y="139" class="t">ADK Planner</text><text x="686" y="168" class="s">validated execution plan</text>
+  <path d="M300 145H355" class="l"/><path d="M590 145H650" class="l"/>
+  <g><rect x="40" y="285" rx="15" width="210" height="72" class="b"/><text x="74" y="328" class="t">Documents Agent</text><rect x="285" y="285" rx="15" width="200" height="72" class="b"/><text x="327" y="328" class="t">Planning Agent</text><rect x="520" y="285" rx="15" width="200" height="72" class="b"/><text x="555" y="328" class="t">Meeting Agent</text><rect x="755" y="285" rx="15" width="200" height="72" class="b"/><text x="800" y="328" class="t">Web Search</text><rect x="990" y="285" rx="15" width="200" height="72" class="b"/><text x="1040" y="328" class="t">Code Agent</text></g>
+  <path d="M755 190L145 285" class="l"/><path d="M755 190L385 285" class="l"/><path d="M755 190L620 285" class="l"/><path d="M755 190L855 285" class="l"/><path d="M755 190L1090 285" class="l"/>
+  <g><rect x="65" y="420" rx="14" width="175" height="64" class="a"/><text x="93" y="459" class="t">Documents MCP</text><rect x="300" y="420" rx="14" width="175" height="64" class="a"/><text x="337" y="459" class="t">Planner MCP</text><rect x="535" y="420" rx="14" width="175" height="64" class="a"/><text x="566" y="459" class="t">Calendar MCP</text></g>
+  <path d="M145 357V420" class="l"/><path d="M385 357V420" class="l"/><path d="M620 357V420" class="l"/>
+  <rect x="730" y="520" rx="18" width="245" height="86" class="a"/><text x="792" y="558" class="t">Result Agent</text><text x="756" y="586" class="s">answer · citations · Mermaid</text>
+  <path d="M145 357L775 520" class="l"/><path d="M385 357L800 520" class="l"/><path d="M620 357L825 520" class="l"/><path d="M855 357V520" class="l"/><path d="M1090 357L930 520" class="l"/>
+  <rect x="190" y="630" rx="18" width="390" height="92" class="b"/><text x="260" y="670" class="t">Cloud SQL PostgreSQL + pgvector</text><text x="226" y="700" class="s">documents · meetings · workspace · conversations</text>
+  <path d="M152 484L300 630" class="l"/><path d="M388 484L390 630" class="l"/><path d="M622 484L490 630" class="l"/>
+  <rect x="1030" y="100" rx="18" width="300" height="90" class="b"/><text x="1094" y="139" class="t">Cloud Trace + Logging</text><text x="1082" y="168" class="s">metadata only · implicit cache metrics</text><path d="M590 125H1030" class="l"/>
+  <rect x="1030" y="665" rx="18" width="390" height="150" class="f"/><text x="1060" y="705" class="t">Future live adapters</text><text x="1060" y="740" class="s">Jira · Confluence · Google Calendar</text><text x="1060" y="770" class="s">GitHub · Employee directory</text><text x="1060" y="800" class="s">same MCP contracts and ACL enforcement</text>
+  <path d="M240 452L1030 710" class="l"/>
+  <rect x="700" y="760" rx="16" width="250" height="74" class="b"/><text x="752" y="795" class="t">Cloud Run Jobs</text><text x="732" y="820" class="s">Alembic migration · seed</text><path d="M700 797L580 700" class="l"/>
 </svg>

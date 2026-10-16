@@ -145,6 +145,7 @@ function isSameCalendarWeek(left: Date, right: Date) {
 
 type CalendarViewProps = {
   today: Date;
+  initialMeetingId?: string | null;
 };
 
 function formatTranscriptTime(milliseconds: number) {
@@ -159,13 +160,7 @@ function MeetingSummary({ record }: { record: MeetingRecord }) {
   if (!analysis) return <p className="calendar-summary-lead">No summary is available.</p>;
   return (
     <>
-      <p className="calendar-summary-lead">{analysis.summary}</p>
-      {analysis.decisions.length > 0 && (
-        <section>
-          <h3>Decisions</h3>
-          <ul>{analysis.decisions.map((item) => <li key={item.text}>{item.text}</li>)}</ul>
-        </section>
-      )}
+      <section><h3>Summary</h3><p className="calendar-summary-lead">{analysis.summary}</p></section>
       {analysis.action_items.length > 0 && (
         <section>
           <h3>Action items</h3>
@@ -180,10 +175,15 @@ function MeetingSummary({ record }: { record: MeetingRecord }) {
           </ul>
         </section>
       )}
-      {analysis.open_questions.length > 0 && (
+      {((analysis.clarifications_needed?.length ?? 0) > 0 || analysis.open_questions.length > 0) && (
         <section>
-          <h3>Open questions</h3>
-          <ul>{analysis.open_questions.map((item) => <li key={item}>{item}</li>)}</ul>
+          <h3>Clarification needed</h3>
+          <ul>
+            {(analysis.clarifications_needed?.length
+              ? analysis.clarifications_needed.map((item) => item.text)
+              : analysis.open_questions
+            ).map((item) => <li key={item}>{item}</li>)}
+          </ul>
         </section>
       )}
       <details className="calendar-transcript">
@@ -201,8 +201,9 @@ function MeetingSummary({ record }: { record: MeetingRecord }) {
   );
 }
 
-export function CalendarView({ today }: CalendarViewProps) {
+export function CalendarView({ today, initialMeetingId }: CalendarViewProps) {
   const gridScrollRef = useRef<HTMLDivElement>(null);
+  const deepLinkHandledRef = useRef<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => normalizeDay(today));
   const [weekStart, setWeekStart] = useState(() => startOfWorkWeek(today));
   const [sidebarMonth, setSidebarMonth] = useState(() => startOfMonth(today));
@@ -303,12 +304,26 @@ export function CalendarView({ today }: CalendarViewProps) {
     };
   }, [weekStart]);
 
+  useEffect(() => {
+    if (!initialMeetingId || events.length === 0) return;
+    const event = events.find((row) => row.meeting_id === initialMeetingId);
+    if (event) setSelected(event);
+  }, [events, initialMeetingId]);
+
   function focusDate(day: Date) {
     const normalized = normalizeDay(day);
     setSelectedDate(normalized);
     setWeekStart(startOfWorkWeek(normalized));
     setSidebarMonth(startOfMonth(normalized));
   }
+
+  useEffect(() => {
+    if (!initialMeetingId || deepLinkHandledRef.current === initialMeetingId) return;
+    deepLinkHandledRef.current = initialMeetingId;
+    void fetchMeetingRecord(initialMeetingId)
+      .then((record) => focusDate(new Date(record.transcript.started_at)))
+      .catch(() => setSummaryError("The linked meeting could not be opened."));
+  }, [initialMeetingId]);
 
   function shiftWorkWeek(days: number) {
     const monday = addDays(weekStart, days);

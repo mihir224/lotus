@@ -1,7 +1,7 @@
 import logging
 import queue
 import threading
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
@@ -18,6 +18,7 @@ from .auth import get_auth_context
 from .calendar import create_calendar_event, list_calendar_events
 from .config import get_settings
 from .docs import create_doc_source, get_doc_page, get_docs_catalog, search_docs
+from .mcp_servers import calendar_mcp_app, documents_mcp_app, planner_mcp_app
 from .meetings import process_meeting, summarize_meeting
 from .models import (
     AuthConfig,
@@ -29,6 +30,10 @@ from .models import (
     CalendarEventCreate,
     CalendarEventItem,
     ChatRequest,
+    ChatSessionCreate,
+    ChatSessionDetail,
+    ChatSessionPage,
+    ChatSessionSummary,
     DocCatalogResponse,
     DocPageDetail,
     DocSearchHit,
@@ -66,16 +71,22 @@ async def lifespan(_: FastAPI):
         settings.generation_model,
         settings.active_embedding_model,
     )
-    yield
+    async with AsyncExitStack() as stack:
+        for mcp_app in (planner_mcp_app, calendar_mcp_app, documents_mcp_app):
+            await stack.enter_async_context(mcp_app.router.lifespan_context(mcp_app))
+        yield
     logger.info("lotus.shutdown")
 
 
 app = FastAPI(title="Lotus API", version="0.1.0", lifespan=lifespan)
+app.mount("/internal/mcp/planner", planner_mcp_app)
+app.mount("/internal/mcp/calendar", calendar_mcp_app)
+app.mount("/internal/mcp/documents", documents_mcp_app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PATCH"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type", "X-Lotus-Tenant", "X-Lotus-User"],
 )
 
@@ -169,6 +180,44 @@ def chat(
             headers={"Retry-After": str(retry_after)},
         )
     return answer_chat(request, auth)
+
+
+@app.post("/v1/chat/sessions", response_model=ChatSessionSummary)
+def create_chat_session_endpoint(
+    payload: ChatSessionCreate,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+) -> ChatSessionSummary:
+    return get_store().create_chat_session(auth, payload.project_id)
+
+
+@app.get("/v1/chat/sessions", response_model=ChatSessionPage)
+def list_chat_sessions_endpoint(
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+    limit: int = 30,
+    cursor: str | None = None,
+) -> ChatSessionPage:
+    return get_store().list_chat_sessions(auth, min(max(limit, 1), 100), cursor)
+
+
+@app.get("/v1/chat/sessions/{session_id}", response_model=ChatSessionDetail)
+def get_chat_session_endpoint(
+    session_id: str,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+) -> ChatSessionDetail:
+    detail = get_store().get_chat_session(session_id, auth)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return detail
+
+
+@app.delete("/v1/chat/sessions/{session_id}", status_code=204)
+def delete_chat_session_endpoint(
+    session_id: str,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+) -> Response:
+    if not get_store().archive_chat_session(session_id, auth):
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return Response(status_code=204)
 
 
 @app.post("/v1/chat/stream")

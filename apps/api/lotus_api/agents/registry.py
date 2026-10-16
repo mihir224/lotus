@@ -4,9 +4,16 @@ from google import genai
 from google.adk.agents import Agent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import google_search
+from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 
 from ..config import Settings
-from ..models import AuthContext, ChatRequest, ExecutionPlan, MeetingAnalysis
+from ..models import (
+    AuthContext,
+    ChatRequest,
+    ExecutionPlan,
+    MeetingAnalysis,
+    SpecialistResult,
+)
 from ..storage.base import KnowledgeStore
 
 
@@ -32,9 +39,10 @@ def build_planner_agent(settings: Settings) -> Agent:
         model=_model(settings, settings.router_model),
         timeout=settings.agent_timeout_seconds,
         instruction=(
-            "You are the Lotus Planner. Select one or more specialists from data, meeting, web, "
-            "and code. "
-            "web. Use data for internal documents and similar-team work; meeting for calendar, "
+            "You are the Lotus Planner. Select one or more specialists from documents, planning, "
+            "meeting, web, and code. Use documents for internal knowledge, architecture, and "
+            "similar-team work; planning for projects, work items, and stakeholders; meeting "
+            "for calendar, "
             "transcript, decision, action-item, and historical-meeting questions; web only for "
             "public internet research; code for repository implementation questions. For "
             "greetings, "
@@ -43,7 +51,8 @@ def build_planner_agent(settings: Settings) -> Agent:
             "Independent specialists have no dependencies. Add anomaly after meeting only when "
             "the request asks for gaps, conflicts, anomalies, action items, or open questions. "
             "Always add result as the final step depending on every prior step. For relative "
-            "dates, populate explicit UTC date_from/date_to bounds."
+            "dates, populate explicit UTC date_from/date_to bounds. Set artifact_request to "
+            "mermaid only when the user explicitly requests an architecture or process diagram."
         ),
         output_schema=ExecutionPlan,
         output_key="execution_plan",
@@ -77,6 +86,67 @@ def build_web_agent(settings: Settings) -> Agent:
             "evidence brief with source titles and URLs. Distinguish sourced facts from inference."
         ),
         tools=[google_search],
+    )
+
+
+def _mcp_toolset(settings: Settings, path: str, headers: dict[str, str]) -> McpToolset:
+    return McpToolset(
+        connection_params=StreamableHTTPConnectionParams(
+            url=f"{settings.internal_mcp_base_url}{path}/",
+            headers=headers,
+            timeout=10,
+            sse_read_timeout=settings.agent_timeout_seconds,
+        ),
+        tool_list_cache_ttl_seconds=60,
+    )
+
+
+def build_documents_agent(settings: Settings, headers: dict[str, str]) -> Agent:
+    return Agent(
+        name="documents_agent",
+        model=_model(settings, settings.generation_model),
+        timeout=settings.agent_timeout_seconds,
+        instruction=(
+            "Use only the Documents MCP tools to retrieve authorized evidence. Return a "
+            "SpecialistResult with agent='documents'. Preserve source IDs, titles, snippets, "
+            "scores, and navigation targets. Do not compose the final answer."
+        ),
+        tools=[_mcp_toolset(settings, "/internal/mcp/documents", headers)],
+        output_schema=SpecialistResult,
+        output_key="documents_result",
+    )
+
+
+def build_planning_agent(settings: Settings, headers: dict[str, str]) -> Agent:
+    return Agent(
+        name="planning_agent",
+        model=_model(settings, settings.generation_model),
+        timeout=settings.agent_timeout_seconds,
+        instruction=(
+            "Use only the Planner MCP tools to retrieve a project, planning item, or project "
+            "stakeholders. Return a SpecialistResult with agent='planning'. Convert tool records "
+            "to concise evidence with structured project or planning-item navigation. Do not "
+            "compose the final answer."
+        ),
+        tools=[_mcp_toolset(settings, "/internal/mcp/planner", headers)],
+        output_schema=SpecialistResult,
+        output_key="planning_result",
+    )
+
+
+def build_meeting_agent(settings: Settings, headers: dict[str, str]) -> Agent:
+    return Agent(
+        name="meeting_agent",
+        model=_model(settings, settings.generation_model),
+        timeout=settings.agent_timeout_seconds,
+        instruction=(
+            "Use only the Calendar MCP tools to retrieve authorized meeting evidence. Return a "
+            "SpecialistResult with agent='meeting'. Preserve meeting IDs, timestamps, transcript "
+            "snippets, and navigation targets. Do not compose the final answer."
+        ),
+        tools=[_mcp_toolset(settings, "/internal/mcp/calendar", headers)],
+        output_schema=SpecialistResult,
+        output_key="meeting_result",
     )
 
 
@@ -116,8 +186,8 @@ def build_agent_tree(settings: Settings, context: AgentContext) -> Agent:
 
     generation_model = _model(settings, settings.generation_model)
     router_model = _model(settings, settings.router_model)
-    data = Agent(
-        name="data_agent",
+    documents = Agent(
+        name="documents_agent",
         model=generation_model,
         timeout=settings.agent_timeout_seconds,
         instruction="Search company sources using only the supplied tool and return evidence.",
@@ -157,5 +227,5 @@ def build_agent_tree(settings: Settings, context: AgentContext) -> Agent:
             "Create a plan, then transfer among the necessary specialists. Never ask the user "
             "to choose a mode. Always transfer to result_agent last."
         ),
-        sub_agents=[data, meeting, anomaly, web, result],
+        sub_agents=[documents, meeting, anomaly, web, result],
     )
