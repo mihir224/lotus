@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { avatarInitialsColor } from "./boardConstants";
 import { BOARD_ISSUE_UNASSIGNED, type BoardAssignee } from "./workBoardApi";
 
 function UnassignedAvatar({ size = 28 }: { size?: number }) {
@@ -101,7 +102,7 @@ export function AssigneeFilterMenu({
     <div className="board-assignee-filter" ref={rootRef} role="group" aria-label="Filter by assignee">
       <button
         type="button"
-        className={`board-avatar-filter${assigneeFilter.size === 0 ? " active" : ""}`}
+        className={`board-avatar-filter circle board-avatar-filter-all${assigneeFilter.size === 0 ? " active" : ""}`}
         title="All assignees"
         onClick={onClearAssignees}
       >
@@ -122,7 +123,13 @@ export function AssigneeFilterMenu({
             {isUnassignedFilter(person) ? (
               <UnassignedAvatar />
             ) : (
-              <span className="board-avatar" style={{ background: person.avatar_color }}>
+              <span
+                className="board-avatar board-avatar-filter-chip"
+                style={{
+                  background: person.avatar_color,
+                  color: avatarInitialsColor(person.avatar_color)
+                }}
+              >
                 {person.initials}
               </span>
             )}
@@ -181,7 +188,10 @@ export function AssigneeFilterMenu({
                             ) : (
                               <span
                                 className="board-avatar board-avatar-sm"
-                                style={{ background: person.avatar_color }}
+                                style={{
+                                  background: person.avatar_color,
+                                  color: avatarInitialsColor(person.avatar_color)
+                                }}
                                 aria-hidden="true"
                               >
                                 {person.initials}

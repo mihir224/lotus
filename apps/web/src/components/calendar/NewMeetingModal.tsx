@@ -78,25 +78,23 @@ export function NewMeetingModal({ open, anchorDate, onClose, onSave, saving, err
   const hours = Array.from({ length: 13 }, (_, index) => index + 8);
 
   return (
-    <div className="calendar-overlay" role="presentation" onClick={onClose}>
+    <div className="lotus-modal-overlay calendar-overlay" role="presentation" onClick={onClose}>
       <form
-        className="calendar-new-event"
+        className="lotus-modal lotus-modal-wide calendar-new-event"
         onClick={(event) => event.stopPropagation()}
         onSubmit={submit}
       >
-        <header className="calendar-new-event-head">
-          <div>
-            <p className="eyebrow">New event</p>
+        <header className="lotus-modal-head calendar-new-event-head">
+          <span className="lotus-modal-icon" aria-hidden="true">
+            📅
+          </span>
+          <div className="lotus-modal-head-main">
+            <p className="lotus-modal-kicker">New event</p>
             <h2>Schedule a meeting</h2>
           </div>
-          <div className="calendar-new-event-actions">
-            <button type="button" className="calendar-btn" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="calendar-btn calendar-btn-primary" disabled={saving || !draft.title.trim()}>
-              {saving ? "Saving…" : "Save"}
-            </button>
-          </div>
+          <button type="button" className="lotus-modal-close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
         </header>
 
         <div className="calendar-new-event-body">
@@ -200,6 +198,21 @@ export function NewMeetingModal({ open, anchorDate, onClose, onSave, saving, err
         </div>
 
         {error && <div className="error calendar-new-event-error">{error}</div>}
+        <footer className="lotus-modal-foot">
+          <button type="button" className="lotus-modal-btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="lotus-modal-btn-primary"
+            disabled={saving || !draft.title.trim()}
+          >
+            📅 {saving ? "Saving…" : "Save meeting"}
+            <span className="lotus-modal-btn-arrow" aria-hidden="true">
+              →
+            </span>
+          </button>
+        </footer>
       </form>
     </div>
   );

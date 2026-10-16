@@ -1,4 +1,4 @@
-import { CalendarIcon, ChatIcon, DocsIcon, PlannerIcon } from "./NavIcons";
+import { CalendarIcon, ChatIcon, ChatsIcon, DocsIcon, PlannerIcon } from "./NavIcons";
 import { NAV_ITEMS, type AppSection } from "./types";
 
 type AppRailProps = {
@@ -10,7 +10,8 @@ const icons: Record<AppSection, typeof PlannerIcon> = {
   "work-board": PlannerIcon,
   docs: DocsIcon,
   calendar: CalendarIcon,
-  chat: ChatIcon
+  chats: ChatsIcon,
+  agent: ChatIcon
 };
 
 export function AppRail({ activeSection, onSelect }: AppRailProps) {

@@ -1,0 +1,531 @@
+{
+  "sections": [
+    {
+      "id": "favourites",
+      "label": "Favourites"
+    },
+    {
+      "id": "chats",
+      "label": "Chats"
+    }
+  ],
+  "conversations": [
+    {
+      "id": "conv-platform-standup",
+      "section": "favourites",
+      "name": "Platform standup",
+      "kind": "group",
+      "initials": "PS",
+      "avatar_color": "#3d6b5a",
+      "preview": "Jordan: Deploy window closes at 4pm",
+      "time_label": "10:42",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Jordan Lee",
+          "sender_initials": "JL",
+          "is_self": false,
+          "time_label": "9:58 AM",
+          "body": "Morning \u2014 any blockers before we cut the release branch?"
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "10:02 AM",
+          "body": "Only waiting on the integration test fix for checkout retries."
+        },
+        {
+          "id": "m3",
+          "sender_name": "Riley Chen",
+          "sender_initials": "RC",
+          "is_self": false,
+          "time_label": "10:15 AM",
+          "body": "I can pair on that after standup if helpful."
+        },
+        {
+          "id": "m4",
+          "sender_name": "Jordan Lee",
+          "sender_initials": "JL",
+          "is_self": false,
+          "time_label": "10:42 AM",
+          "body": "Deploy window closes at 4pm \u2014 let's aim to merge by 2."
+        }
+      ],
+      "last_activity_at": "2026-10-16T10:42:00"
+    },
+    {
+      "id": "conv-payments-oncall",
+      "section": "favourites",
+      "name": "Payments on-call",
+      "kind": "group",
+      "initials": "PO",
+      "avatar_color": "#4a5568",
+      "preview": "Morgan: Runbook updated for retry exhaustion",
+      "time_label": "Yesterday",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Morgan Patel",
+          "sender_initials": "MP",
+          "is_self": false,
+          "time_label": "4:10 PM",
+          "body": "Heads up \u2014 provider latency is elevated in us-east-2."
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "4:18 PM",
+          "body": "Watching the dashboard. Error rate is still within SLO."
+        },
+        {
+          "id": "m3",
+          "sender_name": "Morgan Patel",
+          "sender_initials": "MP",
+          "is_self": false,
+          "time_label": "5:02 PM",
+          "body": "Runbook updated for retry exhaustion \u2014 link is in the wiki."
+        }
+      ],
+      "last_activity_at": "2026-10-15T17:02:00"
+    },
+    {
+      "id": "conv-release-train",
+      "section": "favourites",
+      "name": "Release train \u2014 Lotus.2026.3.7",
+      "kind": "group",
+      "initials": "RT",
+      "avatar_color": "#0891b2",
+      "preview": "Taylor: QA sign-off pending on PAY-123",
+      "time_label": "Yesterday",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Taylor Ng",
+          "sender_initials": "TN",
+          "is_self": false,
+          "time_label": "Yesterday 3:40 PM",
+          "body": "QA sign-off pending on PAY-123 \u2014 need green integration suite."
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "Yesterday 4:05 PM",
+          "body": "Retry client tests are fixed locally; pushing the branch now."
+        }
+      ],
+      "last_activity_at": "2026-10-15T16:05:00"
+    },
+    {
+      "id": "conv-priya-sharma",
+      "section": "chats",
+      "name": "Priya Sharma",
+      "kind": "direct",
+      "initials": "PS",
+      "avatar_color": "#c45c8a",
+      "preview": "Priya: Analytics deck for retry experiment",
+      "time_label": "11:15",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Priya Sharma",
+          "sender_initials": "PS",
+          "is_self": false,
+          "time_label": "Friday 2:15 PM",
+          "body": "Shared the analytics deck for the retry experiment \u2014 third attempt adds little lift."
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "Friday 2:40 PM",
+          "body": "Thanks, that matches what we saw in load tests. I'll reference it in the ADR."
+        }
+      ],
+      "last_activity_at": "2026-10-16T14:40:00"
+    },
+    {
+      "id": "conv-sam-ortiz",
+      "section": "chats",
+      "name": "Sam Ortiz",
+      "kind": "direct",
+      "initials": "SO",
+      "avatar_color": "#5c4a9f",
+      "preview": "You: Thanks, I'll review the PR today",
+      "time_label": "11:05",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Sam Ortiz",
+          "sender_initials": "SO",
+          "is_self": false,
+          "time_label": "10:50 AM",
+          "body": "Could you take a look at the observability PR when you have a minute?"
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "11:05 AM",
+          "body": "Thanks, I'll review the PR today."
+        }
+      ],
+      "last_activity_at": "2026-10-16T11:05:00"
+    },
+    {
+      "id": "conv-security-review",
+      "section": "chats",
+      "name": "Security review queue",
+      "kind": "group",
+      "initials": "SR",
+      "avatar_color": "#2d6a4f",
+      "preview": "Demo Engineer: Submitted logging policy exception",
+      "time_label": "09:00",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "Friday 11:00 AM",
+          "body": "Submitted logging policy exception for the new trace exporter."
+        },
+        {
+          "id": "m2",
+          "sender_name": "Security Bot",
+          "sender_initials": "SB",
+          "is_self": false,
+          "time_label": "Friday 11:02 AM",
+          "body": "Ticket SEC-882 queued for review. Expected turnaround: 2 business days."
+        }
+      ],
+      "last_activity_at": "2026-10-16T11:02:00"
+    },
+    {
+      "id": "conv-jordan-lee",
+      "section": "chats",
+      "name": "Jordan Lee",
+      "kind": "direct",
+      "initials": "JL",
+      "avatar_color": "#3d6b5a",
+      "preview": "Jordan: Can you own the trace tag rollout doc?",
+      "time_label": "08:58",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Jordan Lee",
+          "sender_initials": "JL",
+          "is_self": false,
+          "time_label": "10:45 AM",
+          "body": "Can you own the trace tag rollout doc for Platform services?"
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "10:52 AM",
+          "body": "Yes \u2014 I'll draft it today and link it from the observability page."
+        },
+        {
+          "id": "m3",
+          "sender_name": "Jordan Lee",
+          "sender_initials": "JL",
+          "is_self": false,
+          "time_label": "10:58 AM",
+          "body": "Perfect. Keep it short \u2014 checklist format works best for the guild."
+        }
+      ],
+      "last_activity_at": "2026-10-16T10:58:00"
+    },
+    {
+      "id": "conv-riley-chen",
+      "section": "chats",
+      "name": "Riley Chen",
+      "kind": "direct",
+      "initials": "RC",
+      "avatar_color": "#4a7c9b",
+      "preview": "Riley: Pairing session moved to 2pm",
+      "time_label": "Yesterday",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Riley Chen",
+          "sender_initials": "RC",
+          "is_self": false,
+          "time_label": "10:22 AM",
+          "body": "Pairing session on the checkout tests moved to 2pm \u2014 still good for you?"
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "10:28 AM",
+          "body": "Works for me. I'll have the branch ready."
+        }
+      ],
+      "last_activity_at": "2026-10-16T10:30:00"
+    },
+    {
+      "id": "conv-alex-kim",
+      "section": "chats",
+      "name": "Alex Kim",
+      "kind": "direct",
+      "initials": "AK",
+      "avatar_color": "#2563eb",
+      "preview": "Alex: Lunch at 12:30?",
+      "time_label": "Yesterday",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Alex Kim",
+          "sender_initials": "AK",
+          "is_self": false,
+          "time_label": "9:20 AM",
+          "body": "Lunch at 12:30? Want to walk through the dashboard template idea."
+        }
+      ],
+      "last_activity_at": "2026-10-16T09:20:00"
+    },
+    {
+      "id": "conv-morgan-patel",
+      "section": "chats",
+      "name": "Morgan Patel",
+      "kind": "direct",
+      "initials": "MP",
+      "avatar_color": "#6b5b4f",
+      "preview": "Morgan: Provider status page is green again",
+      "time_label": "Yesterday",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Morgan Patel",
+          "sender_initials": "MP",
+          "is_self": false,
+          "time_label": "Yesterday 6:12 PM",
+          "body": "Provider status page is green again. Keeping the incident ticket open until morning."
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "Yesterday 6:20 PM",
+          "body": "Sounds good. I'll watch retry exhaustion metrics overnight."
+        }
+      ],
+      "last_activity_at": "2026-10-15T18:20:00"
+    },
+    {
+      "id": "conv-casey-wu",
+      "section": "chats",
+      "name": "Casey Wu",
+      "kind": "direct",
+      "initials": "CW",
+      "avatar_color": "#d97706",
+      "preview": "Casey: Mobile queue docs need a review",
+      "time_label": "Thu",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Casey Wu",
+          "sender_initials": "CW",
+          "is_self": false,
+          "time_label": "Thursday 11:30 AM",
+          "body": "Mobile offline queue docs need a review before we publish to the portal."
+        }
+      ],
+      "last_activity_at": "2026-10-15T11:30:00"
+    },
+    {
+      "id": "conv-mobile-guild",
+      "section": "chats",
+      "name": "Mobile guild",
+      "kind": "group",
+      "initials": "MG",
+      "avatar_color": "#6366f1",
+      "preview": "Casey: SDK bump scheduled for next sprint",
+      "time_label": "Wed",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Casey Wu",
+          "sender_initials": "CW",
+          "is_self": false,
+          "time_label": "Wednesday 9:00 AM",
+          "body": "SDK bump scheduled for next sprint \u2014 breaking change on the queue API."
+        },
+        {
+          "id": "m2",
+          "sender_name": "Alex Kim",
+          "sender_initials": "AK",
+          "is_self": false,
+          "time_label": "Wednesday 9:18 AM",
+          "body": "We'll need a migration note for Payments clients."
+        }
+      ],
+      "last_activity_at": "2026-10-14T09:18:00"
+    },
+    {
+      "id": "conv-data-platform",
+      "section": "chats",
+      "name": "Data platform sync",
+      "kind": "group",
+      "initials": "DP",
+      "avatar_color": "#0d9488",
+      "preview": "Priya: Pipeline lag is back to normal",
+      "time_label": "Tue",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Priya Sharma",
+          "sender_initials": "PS",
+          "is_self": false,
+          "time_label": "Tuesday 4:50 PM",
+          "body": "Checkout events pipeline lag is back to normal after the partition fix."
+        },
+        {
+          "id": "m3",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "Tuesday 5:05 PM",
+          "body": "Great \u2014 I'll close the monitoring ticket on our side."
+        }
+      ],
+      "last_activity_at": "2026-10-13T17:05:00"
+    },
+    {
+      "id": "conv-taylor-ng",
+      "section": "chats",
+      "name": "Taylor Ng",
+      "kind": "direct",
+      "initials": "TN",
+      "avatar_color": "#7c6b9f",
+      "preview": "Taylor: Added copy for third-attempt failure",
+      "time_label": "Mon",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Taylor Ng",
+          "sender_initials": "TN",
+          "is_self": false,
+          "time_label": "Monday 4:00 PM",
+          "body": "Added copy for the third-attempt failure state in Figma \u2014 take a look when you can."
+        }
+      ],
+      "last_activity_at": "2026-10-12T16:00:00"
+    },
+    {
+      "id": "conv-design-review",
+      "section": "chats",
+      "name": "Design review \u2014 checkout",
+      "kind": "group",
+      "initials": "DR",
+      "avatar_color": "#8a5a17",
+      "preview": "Taylor: Updated mockups in Figma",
+      "time_label": "Mon",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Taylor Ng",
+          "sender_initials": "TN",
+          "is_self": false,
+          "time_label": "Monday 2:30 PM",
+          "body": "Updated mockups in Figma for the retry messaging flow."
+        },
+        {
+          "id": "m2",
+          "sender_name": "Alex Kim",
+          "sender_initials": "AK",
+          "is_self": false,
+          "time_label": "Monday 3:05 PM",
+          "body": "Looks good. Can we add clearer copy when the third attempt fails?"
+        },
+        {
+          "id": "m3",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "Monday 3:12 PM",
+          "body": "Agreed \u2014 I'll sync with product on the exact wording."
+        }
+      ],
+      "last_activity_at": "2026-10-12T15:12:00"
+    },
+    {
+      "id": "conv-nina-brooks",
+      "section": "chats",
+      "name": "Nina Brooks",
+      "kind": "direct",
+      "initials": "NB",
+      "avatar_color": "#64748b",
+      "preview": "Nina: Welcome to the Payments program",
+      "time_label": "05/10",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Nina Brooks",
+          "sender_initials": "NB",
+          "is_self": false,
+          "time_label": "Dec 10 2:00 PM",
+          "body": "Welcome to the Payments program \u2014 let me know if you need access to the Confluence space."
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "Dec 10 2:15 PM",
+          "body": "Thanks Nina \u2014 I have access. Appreciate the quick intro."
+        }
+      ],
+      "last_activity_at": "2026-10-12T14:15:00"
+    },
+    {
+      "id": "conv-incident-bridge",
+      "section": "chats",
+      "name": "Incident bridge #4421",
+      "kind": "group",
+      "initials": "IB",
+      "avatar_color": "#9f3e32",
+      "preview": "Riley: Root cause looks like rate limiting",
+      "time_label": "05/10",
+      "messages": [
+        {
+          "id": "m1",
+          "sender_name": "Riley Chen",
+          "sender_initials": "RC",
+          "is_self": false,
+          "time_label": "Dec 10 9:00 AM",
+          "body": "Bridge is open \u2014 seeing elevated 429s from the payment gateway."
+        },
+        {
+          "id": "m2",
+          "sender_name": "You",
+          "sender_initials": "DE",
+          "is_self": true,
+          "time_label": "Dec 10 9:14 AM",
+          "body": "Rolling back the feature flag on checkout retries in sandbox first."
+        },
+        {
+          "id": "m3",
+          "sender_name": "Riley Chen",
+          "sender_initials": "RC",
+          "is_self": false,
+          "time_label": "Dec 10 9:28 AM",
+          "body": "Root cause looks like rate limiting on the provider side. Waiting on their status page."
+        }
+      ],
+      "last_activity_at": "2026-10-05T09:28:00"
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import { accentBucket } from "../../utils/accentBucket";
+
 export const DOC_TYPE_LABEL: Record<string, string> = {
   architecture: "Architecture",
   runbook: "Runbook",
@@ -15,9 +17,7 @@ export function docTypeLabel(sourceType: string): string {
 }
 
 export function docTypeClass(sourceType: string): string {
-  const bucket =
-    Math.abs(sourceType.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0)) % 5;
-  return `docs-type-accent-${bucket}`;
+  return `docs-type-accent-${accentBucket(sourceType, 5)}`;
 }
 
 export const DOC_TYPE_OPTIONS = Object.entries(DOC_TYPE_LABEL).map(([value, label]) => ({

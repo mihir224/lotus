@@ -150,16 +150,22 @@ export function IssueDetailView({
   const breadcrumbIssueKey = isCreate ? "New issue" : issue.issue_key;
 
   return (
-    <div className="board-detail-overlay" role="presentation" onClick={onClose}>
+    <div className="lotus-modal-overlay board-detail-overlay" role="presentation" onClick={onClose}>
       <div
-        className="board-detail"
+        className="lotus-modal lotus-modal-wide board-detail"
         role="dialog"
         aria-labelledby="board-detail-title"
         onClick={(event) => event.stopPropagation()}
       >
         <form className="board-detail-form" onSubmit={submit}>
-          <header className="board-detail-head">
-            <div className="board-detail-head-main">
+          <header className={`board-detail-head${isCreate ? " lotus-modal-head" : ""}`}>
+            {isCreate && (
+              <span className="lotus-modal-icon" aria-hidden="true">
+                ◫
+              </span>
+            )}
+            <div className={`board-detail-head-main${isCreate ? " lotus-modal-head-main" : ""}`}>
+              {isCreate && <p className="lotus-modal-kicker">New work item</p>}
               <p className="board-detail-breadcrumb">
                 <span className={featureAccentClass(breadcrumbFeatureKey)}>
                   {breadcrumbFeatureKey}
@@ -179,7 +185,7 @@ export function IssueDetailView({
                 required
               />
             </div>
-            <button type="button" className="board-icon-btn" onClick={onClose} aria-label="Close">
+            <button type="button" className="lotus-modal-close board-icon-btn" onClick={onClose} aria-label="Close">
               ×
             </button>
           </header>
@@ -294,12 +300,18 @@ export function IssueDetailView({
           </div>
 
           {error && <p className="error board-detail-error">{error}</p>}
-          <footer className="board-detail-actions">
-            <button type="button" className="board-secondary-btn" onClick={onClose}>
+          <footer className="lotus-modal-foot board-detail-actions">
+            <button type="button" className="lotus-modal-btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="board-primary-btn" disabled={saving}>
+            <button type="submit" className="lotus-modal-btn-primary" disabled={saving}>
+              {isCreate ? "◫ " : ""}
               {saving ? (isCreate ? "Creating…" : "Saving…") : isCreate ? "Create issue" : "Save changes"}
+              {isCreate && (
+                <span className="lotus-modal-btn-arrow" aria-hidden="true">
+                  →
+                </span>
+              )}
             </button>
           </footer>
         </form>

@@ -9,6 +9,7 @@ import type { AppSection } from "./components/navigation/types";
 import { ProfileAvatar } from "./components/profile/ProfileAvatar";
 import { ProfilePanel } from "./components/profile/ProfilePanel";
 import { useUserProfile } from "./components/profile/useUserProfile";
+import { ChatsView } from "./components/chats/ChatsView";
 import { WorkBoardView } from "./components/work-board/WorkBoardView";
 import { AIWorkspace } from "./components/workspace/AIWorkspace";
 import { ChatHistoryDialog } from "./components/workspace/ChatHistoryDialog";
@@ -18,11 +19,18 @@ import type { ChatMessage, ChatSession, GroundedAnswer, NavigationTarget, RunEve
 
 type Theme = "dark" | "light";
 
+const APP_SECTIONS: AppSection[] = ["agent", "chats", "calendar", "docs", "work-board"];
+
+function parseSectionParam(raw: string | null): AppSection {
+  if (raw === "chat") return "agent";
+  if (raw && APP_SECTIONS.includes(raw as AppSection)) return raw as AppSection;
+  return "agent";
+}
+
 function initialLocation() {
   const params = new URLSearchParams(window.location.search);
-  const requested = params.get("section") as AppSection | null;
   return {
-    section: requested && ["chat", "calendar", "docs", "work-board"].includes(requested) ? requested : "chat" as AppSection,
+    section: parseSectionParam(params.get("section")),
     meetingId: params.get("meeting"),
     documentId: params.get("document"),
     projectId: params.get("project"),
@@ -113,7 +121,7 @@ export function App() {
 
   async function openHistory() { setHistoryOpen(true); setHistoryLoading(true); try { setSessions(await listChatSessions()); } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to load history"); } finally { setHistoryLoading(false); } }
   async function newConversation() { const created = await createChatSession("payments"); setChatSessionId(created.session_id); localStorage.setItem("lotus.chat_session_id", created.session_id); setMessages([]); setAnswer(null); setHistoryOpen(false); }
-  async function openConversation(id: string) { const detail = await getChatSession(id); setChatSessionId(id); localStorage.setItem("lotus.chat_session_id", id); setMessages(detail.messages); setAnswer([...detail.messages].reverse().find((item) => item.response)?.response ?? null); setHistoryOpen(false); setActiveSection("chat"); }
+  async function openConversation(id: string) { const detail = await getChatSession(id); setChatSessionId(id); localStorage.setItem("lotus.chat_session_id", id); setMessages(detail.messages); setAnswer([...detail.messages].reverse().find((item) => item.response)?.response ?? null); setHistoryOpen(false); setActiveSection("agent"); }
   async function removeConversation(id: string) { if (!window.confirm("Delete this conversation?")) return; await deleteChatSession(id); setSessions((current) => current.filter((item) => item.session_id !== id)); if (id === chatSessionId) { localStorage.removeItem("lotus.chat_session_id"); setChatSessionId(null); setMessages([]); setAnswer(null); } }
 
   function navigate(target: NavigationTarget) {
@@ -128,12 +136,12 @@ export function App() {
   if (!authConfig) return <main className="login-shell"><p>Loading Lotus…</p></main>;
   if (authConfig.mode === "google" && !session) return authConfig.google_client_id ? <GoogleLogin clientId={authConfig.google_client_id} onAuthenticated={setSession} /> : <main className="login-shell"><div className="error">Google OAuth is not configured.</div></main>;
 
-  const mainContent = activeSection === "work-board" ? <WorkBoardView initialProjectId={projectTarget} initialIssueKey={issueTarget} /> : activeSection === "docs" ? <DocsView initialDocumentId={documentTarget} /> : activeSection === "calendar" ? <CalendarView today={new Date()} initialMeetingId={meetingTarget} /> : <AIWorkspace message={message} messages={messages} streamedAnswer={streamedAnswer} loading={loading} error={error} theme={theme} onMessageChange={setMessage} onSubmit={submit} onCancel={() => controllerRef.current?.abort()} onOpenHistory={() => void openHistory()} onNavigate={navigate} />;
+  const mainContent = activeSection === "work-board" ? <WorkBoardView initialProjectId={projectTarget} initialIssueKey={issueTarget} /> : activeSection === "docs" ? <DocsView initialDocumentId={documentTarget} /> : activeSection === "calendar" ? <CalendarView today={new Date()} initialMeetingId={meetingTarget} /> : activeSection === "chats" ? <ChatsView /> : <AIWorkspace message={message} messages={messages} streamedAnswer={streamedAnswer} loading={loading} error={error} theme={theme} onMessageChange={setMessage} onSubmit={submit} onCancel={() => controllerRef.current?.abort()} onOpenHistory={() => void openHistory()} onNavigate={navigate} />;
 
   return <main className="shell">
     <header className="topbar"><div className="brand"><div className="lotus-mark" aria-hidden="true">✦</div><div><strong>Lotus</strong><span>Enterprise workspace</span></div></div>{profile && <button type="button" className="profile-topbar-btn" aria-label="Open profile" onClick={() => setProfileOpen(true)}><ProfileAvatar profile={profile} size={40} /></button>}</header>
     {profile && <ProfilePanel open={profileOpen} profile={profile} theme={theme} onThemeChange={setTheme} onClose={() => setProfileOpen(false)} showSignOut={authConfig.mode === "google" && Boolean(session)} onSignOut={() => { signOut(); setSession(null); setProfileOpen(false); }} />}
-    <section className={`workspace${activeSection === "chat" && debugEnabled ? "" : " workspace-two-col"}`}><AppRail activeSection={activeSection} onSelect={(section) => { setActiveSection(section); window.history.pushState({}, "", `?section=${section}`); }} /><section className={`conversation conversation-${activeSection}`}>{mainContent}</section>{activeSection === "chat" && debugEnabled && <EvidenceDrawer answer={answer} events={runEvents} activeTab={drawerTab} onTabChange={setDrawerTab} />}</section>
+    <section className={`workspace${activeSection === "agent" && debugEnabled ? "" : " workspace-two-col"}`}><AppRail activeSection={activeSection} onSelect={(section) => { setActiveSection(section); window.history.pushState({}, "", `?section=${section}`); }} /><section className={`conversation conversation-${activeSection}${activeSection === "chats" ? " conversation-chats" : ""}`}>{mainContent}</section>{activeSection === "agent" && debugEnabled && <EvidenceDrawer answer={answer} events={runEvents} activeTab={drawerTab} onTabChange={setDrawerTab} />}</section>
     <ChatHistoryDialog open={historyOpen} sessions={sessions} currentSessionId={chatSessionId} loading={historyLoading} onClose={() => setHistoryOpen(false)} onNew={() => void newConversation()} onOpen={(id) => void openConversation(id)} onDelete={(id) => void removeConversation(id)} />
     <DebugDialog open={debugDialogOpen} enabled={debugEnabled} onChange={setDebugEnabled} onClose={() => setDebugDialogOpen(false)} />
   </main>;

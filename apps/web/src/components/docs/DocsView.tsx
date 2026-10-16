@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CreateDocModal } from "./CreateDocModal";
+import { formatShortDate } from "../../utils/formatDate";
 import { docTypeClass, docTypeLabel } from "./docConstants";
 import {
   createDoc,
@@ -10,17 +11,6 @@ import {
   type DocPage,
   type DocSearchHit
 } from "./docsApi";
-
-function formatUpdated(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
-}
 
 export function DocsView({ initialDocumentId }: { initialDocumentId?: string | null }) {
   const [catalog, setCatalog] = useState<DocCatalog | null>(null);
@@ -132,7 +122,6 @@ export function DocsView({ initialDocumentId }: { initialDocumentId?: string | n
     <div className="docs-shell">
       <header className="docs-header">
         <div>
-          <p className="eyebrow">Knowledge</p>
           <h1>Docs</h1>
         </div>
         <div className="docs-header-actions">
@@ -248,7 +237,7 @@ export function DocsView({ initialDocumentId }: { initialDocumentId?: string | n
                   <span className={`docs-type-chip ${docTypeClass(page.source_type)}`}>
                     {docTypeLabel(page.source_type)}
                   </span>
-                  <span className="docs-article-updated">Updated {formatUpdated(page.updated_at)}</span>
+                  <span className="docs-article-updated">Updated {formatShortDate(page.updated_at)}</span>
                   <span className="docs-article-system">{page.source_system}</span>
                 </div>
               </header>

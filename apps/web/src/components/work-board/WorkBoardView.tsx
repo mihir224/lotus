@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BoardToolbar } from "./BoardToolbar";
-import { BOARD_COLUMNS, featureAccentClass, ISSUE_TYPE_LABEL } from "./boardConstants";
+import { avatarInitialsColor, BOARD_COLUMNS, featureAccentClass, priorityLabel } from "./boardConstants";
 import { IssueDetailView } from "./IssueDetailView";
 import {
   BOARD_ISSUE_UNASSIGNED,
@@ -48,6 +48,7 @@ export function WorkBoardView({
   const [assigneeFilter, setAssigneeFilter] = useState<Set<string>>(() => new Set());
   const [typeFilter, setTypeFilter] = useState<BoardIssueType | "all">("all");
   const [creatingIssue, setCreatingIssue] = useState(false);
+  const [createStatus, setCreateStatus] = useState<BoardIssueStatus>("ready_to_start");
 
   const load = useCallback(async (nextTeamId: string, projectId?: string) => {
     setLoading(true);
@@ -105,10 +106,10 @@ export function WorkBoardView({
       story_points: 0,
       sprint: null,
       reporter_id: BOARD_ISSUE_UNASSIGNED,
-      status: "ready_to_start",
+      status: createStatus,
       assignee_id: BOARD_ISSUE_UNASSIGNED
     };
-  }, [data, teamId]);
+  }, [data, teamId, createStatus]);
 
   async function applyIssueUpdate(issueKey: string, patch: Parameters<typeof patchBoardIssue>[1]) {
     const updated = await patchBoardIssue(issueKey, patch);
@@ -158,13 +159,15 @@ export function WorkBoardView({
     <div className="board-shell">
       <header className="board-header">
         <div>
-          <p className="eyebrow">{data.board.project_name}</p>
           <h1>{data.board.board_title}</h1>
         </div>
         <button
           type="button"
           className="board-primary-btn"
-          onClick={() => setCreatingIssue(true)}
+          onClick={() => {
+            setCreateStatus("ready_to_start");
+            setCreatingIssue(true);
+          }}
         >
           Create
         </button>
@@ -213,17 +216,32 @@ export function WorkBoardView({
               }}
             >
               <header className="board-column-head">
-                <h2>{column.label}</h2>
+                <div className="board-column-title">
+                  <span className={`board-column-dot ${column.dotClass}`} aria-hidden="true" />
+                  <h2>{column.label}</h2>
+                </div>
                 <span className="board-count">{cards.length}</span>
               </header>
+              <button
+                type="button"
+                className="board-column-create"
+                onClick={() => {
+                  setCreateStatus(column.id);
+                  setCreatingIssue(true);
+                }}
+              >
+                <span className="board-column-create-icon" aria-hidden="true">+</span>
+                Create item
+              </button>
               <ul className="board-card-list">
                 {cards.map((issue) => {
                   const assignee = assigneeById.get(issue.assignee_id);
+                  const accent = featureAccentClass(issue.feature_key);
                   return (
                     <li key={issue.issue_key}>
                       <button
                         type="button"
-                        className={`board-card${draggingKey === issue.issue_key ? " dragging" : ""}`}
+                        className={`board-card ${accent}${draggingKey === issue.issue_key ? " dragging" : ""}`}
                         draggable
                         onDragStart={(event) => {
                           event.dataTransfer.setData("text/plain", issue.issue_key);
@@ -233,41 +251,49 @@ export function WorkBoardView({
                         onDragEnd={() => setDraggingKey(null)}
                         onClick={() => setSelectedIssue(issue)}
                       >
-                        <div className="board-card-title-row">
+                        <span className="board-card-accent" aria-hidden="true" />
+                        <div className="board-card-body">
+                          <div className="board-card-top">
+                            <span className="board-card-key">{issue.issue_key}</span>
+                            <span
+                              className={`board-priority-pill board-priority-${issue.priority}`}
+                            >
+                              <span className="board-priority-glyph" aria-hidden="true">
+                                {issue.priority === "high"
+                                  ? "▲"
+                                  : issue.priority === "medium"
+                                    ? "◆"
+                                    : "▼"}
+                              </span>
+                              {priorityLabel(issue.priority)}
+                            </span>
+                            <span className="board-card-more" aria-hidden="true">
+                              ···
+                            </span>
+                          </div>
                           <p className="board-card-title">{issue.title}</p>
-                          <span
-                            className={`board-type-icon board-type-${issue.issue_type}`}
-                            title={ISSUE_TYPE_LABEL[issue.issue_type]}
-                            aria-hidden="true"
-                          >
-                            {issue.issue_type === "bug" ? "🐞" : "⚡"}
-                          </span>
-                        </div>
-                        <p
-                          className={`board-feature-chip ${featureAccentClass(issue.feature_key)}`}
-                        >
-                          <span className="board-feature-swatch" aria-hidden="true" />
-                          <span className="board-feature-text">{issue.feature_title}</span>
-                        </p>
-                        <div className="board-card-meta">
-                          <span className="board-meta-pill">{issue.story_points}</span>
-                          <span className={`board-priority board-priority-${issue.priority}`}>
-                            {issue.priority === "high" ? "▲▲" : issue.priority === "medium" ? "▲" : "▼"}
-                          </span>
-                        </div>
-                        <div className="board-card-footer">
-                          <span className="board-card-key">
-                            <span className="board-key-icon" aria-hidden="true">▸</span>
-                            {issue.issue_key}
-                          </span>
-                          <span
-                            className="board-avatar board-avatar-sm"
-                            style={{ background: assignee?.avatar_color ?? "#dcecdf" }}
-                            title={assignee?.name ?? "Unassigned"}
-                            aria-hidden="true"
-                          >
-                            {assignee?.initials ?? "?"}
-                          </span>
+                          <p className={`board-feature-chip ${accent}`}>
+                            <span className="board-feature-icon" aria-hidden="true">
+                              ◫
+                            </span>
+                            <span className="board-feature-text">{issue.feature_title}</span>
+                          </p>
+                          <div className="board-card-footer">
+                            <div className="board-card-assignee">
+                              <span
+                                className="board-avatar board-avatar-sm board-card-avatar"
+                                style={{
+                                  background: assignee?.avatar_color ?? "#3d4f48",
+                                  color: avatarInitialsColor(assignee?.avatar_color ?? "#3d4f48")
+                                }}
+                              >
+                                {assignee?.initials ?? "?"}
+                              </span>
+                              <span className="board-card-assignee-name">
+                                {assignee?.name ?? "Unassigned"}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </button>
                     </li>

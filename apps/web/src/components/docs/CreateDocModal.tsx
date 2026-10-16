@@ -46,36 +46,47 @@ export function CreateDocModal({ open, teamOptions, onClose, onCreate }: CreateD
   }
 
   return (
-    <div className="board-detail-overlay" role="presentation" onClick={onClose}>
+    <div className="lotus-modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className="docs-create-modal"
+        className="lotus-modal docs-create-modal"
         role="dialog"
         aria-labelledby="docs-create-title"
         onClick={(event) => event.stopPropagation()}
       >
         <form onSubmit={submit}>
-          <header className="docs-create-head">
-            <div>
-              <p className="eyebrow">New document</p>
+          <header className="lotus-modal-head">
+            <span className="lotus-modal-icon" aria-hidden="true">
+              📄
+            </span>
+            <div className="lotus-modal-head-main">
+              <p className="lotus-modal-kicker">New document</p>
               <h2 id="docs-create-title">Create a page</h2>
+              <p className="lotus-modal-desc">
+                Add a new document to your workspace. You can create a guide, runbook, or add any
+                other type of documentation.
+              </p>
             </div>
-            <button type="button" className="board-icon-btn" onClick={onClose} aria-label="Close">
+            <button type="button" className="lotus-modal-close" onClick={onClose} aria-label="Close">
               ×
             </button>
           </header>
 
-          <div className="docs-create-body">
+          <div className="lotus-modal-body docs-create-body">
             <label className="board-field">
-              <span>Title</span>
+              <span>
+                Title<span className="req">*</span>
+              </span>
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Document title"
+                placeholder="Enter document title…"
                 required
               />
             </label>
             <label className="board-field">
-              <span>Team</span>
+              <span>
+                Team<span className="req">*</span>
+              </span>
               <input
                 list="docs-team-options"
                 value={team}
@@ -90,7 +101,9 @@ export function CreateDocModal({ open, teamOptions, onClose, onCreate }: CreateD
               </datalist>
             </label>
             <label className="board-field">
-              <span>Type</span>
+              <span>
+                Type<span className="req">*</span>
+              </span>
               <select value={sourceType} onChange={(event) => setSourceType(event.target.value)}>
                 {DOC_TYPE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -100,7 +113,9 @@ export function CreateDocModal({ open, teamOptions, onClose, onCreate }: CreateD
               </select>
             </label>
             <label className="board-field">
-              <span>Body</span>
+              <span>
+                Body<span className="req">*</span>
+              </span>
               <textarea
                 value={body}
                 onChange={(event) => setBody(event.target.value)}
@@ -112,12 +127,15 @@ export function CreateDocModal({ open, teamOptions, onClose, onCreate }: CreateD
           </div>
 
           {error && <p className="error docs-create-error">{error}</p>}
-          <footer className="docs-create-actions">
-            <button type="button" className="board-secondary-btn" onClick={onClose}>
+          <footer className="lotus-modal-foot docs-create-actions">
+            <button type="button" className="lotus-modal-btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="board-primary-btn" disabled={saving}>
-              {saving ? "Creating…" : "Create document"}
+            <button type="submit" className="lotus-modal-btn-primary" disabled={saving}>
+              📄 {saving ? "Creating…" : "Create document"}
+              <span className="lotus-modal-btn-arrow" aria-hidden="true">
+                →
+              </span>
             </button>
           </footer>
         </form>
