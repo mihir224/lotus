@@ -200,7 +200,7 @@ class MemoryKnowledgeStore:
                 continue
             score = _cosine(query_vector, row["embedding"])
             exact_source = row["source_id"].casefold() in normalized_query
-            if score >= 0.23 or exact_source:
+            if score >= 0.25 or exact_source:
                 scored.append((1.0 if exact_source else score, row))
         scored.sort(key=lambda item: (-item[0], item[1]["source_id"]))
         return [
@@ -254,6 +254,8 @@ class MemoryKnowledgeStore:
                 if date_to and row["started_at"] >= date_to:
                     continue
                 if row["embedding_model"] != self.embedder.model_id:
+                    continue
+                if row["chunk_text"].strip().casefold().startswith("scheduled meeting:"):
                     continue
                 scored.append((_cosine(query_vector, row["embedding"]), row))
         scored.sort(key=lambda item: (-item[0], item[1]["meeting_id"], item[1]["start_ms"]))

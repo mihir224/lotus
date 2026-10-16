@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 from lotus_api.agents.orchestrator import OrchestrationService
@@ -81,3 +82,19 @@ def test_live_planner_timeout_falls_back_to_result_without_data() -> None:
 def test_planner_routes_project_stakeholders_to_planning() -> None:
     plan = fixture_plan(request("Who are the stakeholders for the payments project?"))
     assert [step.agent for step in plan.steps] == [AgentName.PLANNING, AgentName.RESULT]
+
+
+def test_fixture_planner_resolves_arbitrary_calendar_days() -> None:
+    plan = fixture_plan(
+        request("How many meetings did I have on 15th Aug?"),
+        now=datetime(2026, 10, 16, tzinfo=UTC),
+    )
+    assert plan.date_from == datetime(2026, 8, 15, tzinfo=UTC)
+    assert plan.date_to == datetime(2026, 8, 16, tzinfo=UTC)
+
+    reversed_date = fixture_plan(
+        request("What meetings did I have on February 14, 2025?"),
+        now=datetime(2026, 10, 16, tzinfo=UTC),
+    )
+    assert reversed_date.date_from == datetime(2025, 2, 14, tzinfo=UTC)
+    assert reversed_date.date_to == datetime(2025, 2, 15, tzinfo=UTC)

@@ -51,7 +51,8 @@ def build_planner_agent(settings: Settings) -> Agent:
             "Independent specialists have no dependencies. Add anomaly after meeting only when "
             "the request asks for gaps, conflicts, anomalies, action items, or open questions. "
             "Always add result as the final step depending on every prior step. For relative "
-            "dates, populate explicit UTC date_from/date_to bounds. Set artifact_request to "
+            "dates—including arbitrary days, months, and relative dates—populate explicit UTC "
+            "date_from/date_to bounds. Set artifact_request to "
             "mermaid only when the user explicitly requests an architecture or process diagram."
         ),
         output_schema=ExecutionPlan,
@@ -70,6 +71,10 @@ def build_result_agent(settings: Settings) -> Agent:
             "not invent company facts. If a result-only plan contains an enterprise factual "
             "request, explain that routing was unavailable and ask the user to retry. When any "
             "specialist is present, answer only from supplied normalized evidence and artifacts. "
+            "Treat calendar-only records as schedule metadata, not proof that a meeting occurred. "
+            "Never call a calendar description a transcript or invent discussion content when "
+            "transcript_available is false. Present meeting dates and times naturally instead of "
+            "dumping ISO timestamps, and omit internal meeting IDs unless the user asks for them. "
             "Preserve bracketed citation numbers, state uncertainty when evidence is insufficient, "
             "and never claim that a source or meeting said something absent from the evidence."
         ),
@@ -107,9 +112,13 @@ def build_documents_agent(settings: Settings, headers: dict[str, str]) -> Agent:
         model=_model(settings, settings.generation_model),
         timeout=settings.agent_timeout_seconds,
         instruction=(
-            "Use only the Documents MCP tools to retrieve authorized evidence. Return a "
-            "SpecialistResult with agent='documents'. Preserve source IDs, titles, snippets, "
-            "scores, and navigation targets. Do not compose the final answer."
+            "Use only the Documents MCP tools and infer the user's document intent yourself. "
+            "Use list_documents for counts, inventories, teams, source types, and document "
+            "metadata. Use get_document for an explicit document ID or a selected document. Use "
+            "search_documents only when the question requires semantic retrieval from document "
+            "content. Never run vector search merely to count or list documents. Return a "
+            "SpecialistResult with agent='documents', preserving source IDs and structured "
+            "document navigation. Do not compose the final answer."
         ),
         tools=[_mcp_toolset(settings, "/internal/mcp/documents", headers)],
         output_schema=SpecialistResult,
@@ -123,9 +132,12 @@ def build_planning_agent(settings: Settings, headers: dict[str, str]) -> Agent:
         model=_model(settings, settings.generation_model),
         timeout=settings.agent_timeout_seconds,
         instruction=(
-            "Use only the Planner MCP tools to retrieve a project, planning item, or project "
-            "stakeholders. Return a SpecialistResult with agent='planning'. Convert tool records "
-            "to concise evidence with structured project or planning-item navigation. Do not "
+            "Use only the Planner MCP tools and infer the user's planning intent yourself. Use "
+            "get_project for project metadata, get_project_stakeholders for owners and contacts, "
+            "get_planning_item for an explicit issue key, and search_planning_items for counts, "
+            "lists, text queries, status, team, assignee, or priority filters. Planning queries "
+            "are structured database lookups and never vector searches. Return a SpecialistResult "
+            "with agent='planning' and structured project or planning-item navigation. Do not "
             "compose the final answer."
         ),
         tools=[_mcp_toolset(settings, "/internal/mcp/planner", headers)],
@@ -140,9 +152,18 @@ def build_meeting_agent(settings: Settings, headers: dict[str, str]) -> Agent:
         model=_model(settings, settings.generation_model),
         timeout=settings.agent_timeout_seconds,
         instruction=(
-            "Use only the Calendar MCP tools to retrieve authorized meeting evidence. Return a "
-            "SpecialistResult with agent='meeting'. Preserve meeting IDs, timestamps, transcript "
-            "snippets, and navigation targets. Do not compose the final answer."
+            "Use only the Calendar MCP tools to retrieve authorized meeting evidence. Infer the "
+            "user's calendar intent and choose tools yourself. Use search_meetings for counts, "
+            "lists, arbitrary date ranges, recency, titles, and meeting metadata; it returns both "
+            "a count and records. Use get_meeting when full details for a selected meeting are "
+            "needed. Use search_transcript_chunks only to locate a topic, keyword, quote, or "
+            "discussion inside transcripts. Never use transcript embeddings merely to count or "
+            "list calendar meetings. A get_meeting response with transcript_available=false is "
+            "calendar metadata only; do not present its title or description as transcript "
+            "content. "
+            "Return a SpecialistResult with agent='meeting'. Use "
+            "retrieval_method='calendar_lookup' for calendar/get_meeting records and preserve "
+            "meeting navigation targets. Do not compose the final answer."
         ),
         tools=[_mcp_toolset(settings, "/internal/mcp/calendar", headers)],
         output_schema=SpecialistResult,

@@ -13,6 +13,7 @@ from google.adk.runners import InMemoryRunner
 from google.genai import types
 from opentelemetry import trace
 
+from ..calendar import is_synthetic_calendar_placeholder
 from ..code_store import CodeStore
 from ..config import Settings
 from ..mcp_servers import register_run_context, release_run_context
@@ -46,6 +47,23 @@ from .registry import (
 
 logger = logging.getLogger("uvicorn.error.lotus.orchestration")
 tracer = trace.get_tracer("lotus.orchestration")
+
+
+def _fixture_requires_transcript_search(message: str) -> bool:
+    """Offline fallback only; live ADK Meeting Agent selects its own MCP tool."""
+    normalized = message.casefold()
+    transcript_signals = (
+        "what did we discuss",
+        "where did we discuss",
+        "which meeting",
+        "transcript",
+        "mentioned",
+        "said about",
+        "topic",
+        "keyword",
+        "quote",
+    )
+    return any(signal in normalized for signal in transcript_signals)
 
 
 class OrchestrationService:
@@ -215,7 +233,20 @@ class OrchestrationService:
         if emit:
             emit(event(execution_id, event_type, **values))
 
-    def _node_started(self, emit, execution_id, node_id, label, request, parent_id=None):
+    def _node_started(
+        self,
+        emit,
+        execution_id,
+        node_id,
+        label,
+        request,
+        parent_id=None,
+        input_preview=None,
+    ):
+        preview = input_preview or {
+            "project_id": request.project_id,
+            "meeting_id": request.meeting_id,
+        }
         self._emit(
             emit,
             execution_id,
@@ -226,8 +257,22 @@ class OrchestrationService:
             node_kind="tool" if parent_id else "agent",
             label=label,
             status="running",
-            input_preview={"project_id": request.project_id, "meeting_id": request.meeting_id},
+            input_preview=bounded_preview(preview),
         )
+
+    @staticmethod
+    def _tool_input_preview(request: ChatRequest, plan: ExecutionPlan) -> dict:
+        """Expose bounded user-controlled tool arguments without agent/system prompts."""
+        return {
+            "query": request.message,
+            "project_id": request.project_id,
+            "meeting_id": request.meeting_id,
+            "repository_id": request.repository_id,
+            "planning_item_ids": request.planning_item_ids,
+            "document_ids": request.document_ids,
+            "date_from": plan.date_from.isoformat() if plan.date_from else None,
+            "date_to": plan.date_to.isoformat() if plan.date_to else None,
+        }
 
     def _node_completed(self, emit, execution_id, node_id, label, started, output, parent_id=None):
         self._emit(
@@ -410,7 +455,7 @@ class OrchestrationService:
         live = self.settings.runtime_mode in {"agent_platform", "vertex"}
         if live and name in {AgentName.DOCUMENTS, AgentName.PLANNING, AgentName.MEETING}:
             try:
-                return asyncio.run(self._live_mcp_specialist(name, request, auth))
+                return asyncio.run(self._live_mcp_specialist(name, request, auth, plan))
             except Exception as exc:
                 logger.warning(
                     "specialist.fallback agent=%s reason=%s", name.value, type(exc).__name__
@@ -495,6 +540,11 @@ class OrchestrationService:
                     )
             return SpecialistResult(agent=name, evidence=evidence)
         if name is AgentName.MEETING:
+            if not _fixture_requires_transcript_search(request.message):
+                return SpecialistResult(
+                    agent=name,
+                    evidence=self._calendar_meeting_evidence(request, auth, plan),
+                )
             return SpecialistResult(
                 agent=name,
                 evidence=self.store.search_transcripts(
@@ -538,12 +588,20 @@ class OrchestrationService:
         tool = {
             AgentName.DOCUMENTS: "documents_mcp",
             AgentName.PLANNING: "planner_mcp",
-            AgentName.MEETING: "transcript_search",
+            AgentName.MEETING: "calendar_mcp",
             AgentName.WEB: "web_search",
             AgentName.CODE: "repository_search",
         }[name]
         tool_started = perf_counter()
-        self._node_started(emit, execution_id, f"{name.value}.{tool}", tool, request, name.value)
+        self._node_started(
+            emit,
+            execution_id,
+            f"{name.value}.{tool}",
+            tool,
+            request,
+            name.value,
+            self._tool_input_preview(request, plan),
+        )
         logger.info("agent.start execution_id=%s agent=%s", execution_id, name.value)
         try:
             with tracer.start_as_current_span(f"lotus.agent.{name.value}") as span:
@@ -598,9 +656,13 @@ class OrchestrationService:
         return result
 
     async def _live_mcp_specialist(
-        self, name: AgentName, request: ChatRequest, auth: AuthContext
+        self,
+        name: AgentName,
+        request: ChatRequest,
+        auth: AuthContext,
+        plan: ExecutionPlan,
     ) -> SpecialistResult:
-        context_id, headers = register_run_context(auth, request)
+        context_id, headers = register_run_context(auth, request, plan)
         try:
             builder = {
                 AgentName.DOCUMENTS: build_documents_agent,
@@ -612,6 +674,9 @@ class OrchestrationService:
                 f"Meeting ID: {request.meeting_id or 'none'}\n"
                 f"Selected planning items: {request.planning_item_ids}\n"
                 f"Selected documents: {request.document_ids}\n"
+                f"Trusted planner date range: {plan.date_from or 'none'} to "
+                f"{plan.date_to or 'none'}\n"
+                f"Current UTC time: {datetime.now(UTC).isoformat()}\n"
                 f"Request: {request.message}"
             )
             output = await self._run_agent(builder(self.settings, headers), auth.user_id, prompt)
@@ -621,6 +686,79 @@ class OrchestrationService:
             return result
         finally:
             release_run_context(context_id)
+
+    def _calendar_meeting_evidence(
+        self,
+        request: ChatRequest,
+        auth: AuthContext,
+        plan: ExecutionPlan,
+    ) -> list[Evidence]:
+        if request.meeting_id:
+            meeting_ids = [request.meeting_id]
+        else:
+            meetings = self.store.list_calendar_events(
+                auth,
+                request.project_id,
+                date_from=plan.date_from,
+                date_to=plan.date_to,
+            )
+            limit = 1 if any(
+                signal in request.message.casefold()
+                for signal in ("last meeting", "latest meeting", "most recent meeting")
+            ) else self.settings.max_evidence_items
+            meeting_ids = [row.meeting_id for row in meetings if not row.canceled][:limit]
+
+        evidence: list[Evidence] = []
+        for meeting_id in meeting_ids:
+            record = self.store.get_meeting(meeting_id, auth)
+            event = next(
+                (
+                    row
+                    for row in self.store.list_calendar_events(auth, request.project_id)
+                    if row.meeting_id == meeting_id
+                ),
+                None,
+            )
+            if event is None:
+                continue
+            details = [
+                f"{event.title} was scheduled from {event.started_at.isoformat()} "
+                f"to {event.ended_at.isoformat()}.",
+                f"Organizer: {event.organizer}.",
+                f"Details: {event.description}",
+            ]
+            if (
+                record
+                and not is_synthetic_calendar_placeholder(record)
+                and record.analysis
+                and record.analysis.summary
+            ):
+                details.append(f"Summary: {record.analysis.summary}")
+            evidence.append(
+                Evidence(
+                    source_id=meeting_id,
+                    source_system="calendar",
+                    source_type="meeting_record",
+                    title=event.title,
+                    uri=f"lotus://meetings/{meeting_id}",
+                    snippet=" ".join(details)[:1_500],
+                    updated_at=event.started_at.isoformat(),
+                    retrieval_method="calendar_lookup",
+                    scope=Scope(
+                        tenant_id=auth.tenant_id,
+                        project_id=request.project_id,
+                        meeting_id=meeting_id,
+                    ),
+                    meeting_id=meeting_id,
+                    navigation_target=NavigationTarget(
+                        kind="meeting",
+                        entity_id=meeting_id,
+                        project_id=request.project_id,
+                        label=f"Open {event.title}",
+                    ),
+                )
+            )
+        return evidence
 
     async def _live_web(self, request: ChatRequest, auth: AuthContext) -> list[Evidence]:
         try:

@@ -145,6 +145,8 @@ def test_create_calendar_event_appears_in_list() -> None:
     )
     assert created.status_code == 200
     body = created.json()
+    transcript = client.get(f"/v1/meetings/{body['meeting_id']}")
+    assert transcript.status_code == 404
     listing = client.get(
         "/v1/calendar/events",
         params={
@@ -265,3 +267,17 @@ def test_no_answer_abstains() -> None:
     assert response.status_code == 200
     assert response.json()["evidence"] == []
     assert "could not verify" in response.json()["answer"]
+
+
+def test_last_meeting_uses_calendar_lookup_without_vector_search() -> None:
+    response = client.post(
+        "/v1/chat/messages",
+        json={"message": "Give me details about my last meeting", "project_id": "payments"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agents_used"] == ["meeting", "result"]
+    assert len(body["evidence"]) == 1
+    assert body["evidence"][0]["source_type"] == "meeting_record"
+    assert body["evidence"][0]["retrieval_method"] == "calendar_lookup"
+    assert body["evidence"][0]["score"] is None

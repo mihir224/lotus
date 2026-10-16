@@ -1,13 +1,11 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import uuid4
 
 from .models import (
     AuthContext,
     CalendarEventCreate,
     CalendarEventItem,
-    MeetingAnalysis,
-    MeetingTranscriptInput,
-    TranscriptSegment,
+    MeetingRecord,
 )
 from .storage.base import KnowledgeStore
 
@@ -31,6 +29,14 @@ def list_calendar_events(
     return store.list_calendar_events(auth, project_id, date_from, date_to)
 
 
+def is_synthetic_calendar_placeholder(record: MeetingRecord | None) -> bool:
+    """Identify legacy calendar rows that contain no real transcript content."""
+    if record is None or len(record.transcript.segments) != 1:
+        return False
+    segment = record.transcript.segments[0]
+    return segment.text.strip() == f"Scheduled meeting: {record.transcript.title}."
+
+
 def create_calendar_event(
     store: KnowledgeStore,
     auth: AuthContext,
@@ -42,7 +48,6 @@ def create_calendar_event(
     organizer = auth.name or auth.user_id.replace("-", " ").title() or "Demo User"
     event_id = f"cal-{uuid4().hex[:8]}"
     meeting_id = f"M-{uuid4().hex[:8].upper()}"
-    participants = payload.attendees or [organizer]
     location = payload.location
     if payload.video_meeting and not location:
         location = "Lotus video room"
@@ -65,34 +70,7 @@ def create_calendar_event(
         ended_at=payload.ended_at,
     )
 
-    segment = TranscriptSegment(
-        segment_id=f"{meeting_id.lower()}-s1",
-        start_ms=0,
-        end_ms=max(int((payload.ended_at - payload.started_at).total_seconds() * 1000), 1000),
-        speaker=organizer,
-        text=f"Scheduled meeting: {item.title}.",
-    )
-    transcript = MeetingTranscriptInput(
-        calendar_event_id=event_id,
-        title=item.title,
-        project_id=item.project_id,
-        team="Payments",
-        started_at=item.started_at,
-        ended_at=item.ended_at,
-        participants=participants,
-        language_code="en",
-        recording_url=f"fixture://recordings/{meeting_id}",
-        segments=[segment],
-    )
-    analysis = MeetingAnalysis(
-        summary=f"New meeting scheduled: {item.title}.",
-        open_questions=["Capture decisions after the meeting completes."],
-    )
-    record = store.upsert_meeting(meeting_id, auth, transcript)
-    record.analysis = analysis
-    record.status = "processed"
-    record.updated_at = datetime.now(UTC)
-    store.save_meeting(record, auth)
-
+    # Scheduling metadata is not transcript content. The processing endpoint creates a meeting
+    # record later, when a real transcript is available.
     store.upsert_calendar_event(auth, item)
     return item

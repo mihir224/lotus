@@ -237,7 +237,7 @@ class PostgresKnowledgeStore:
             DocumentEmbeddingRow.project_id == project_id,
             DocumentEmbeddingRow.acl_principals.op("&&")(list(auth.principals)),
             DocumentEmbeddingRow.embedding_model == self.embedder.model_id,
-            (vector_distance <= 0.77) | exact_source,
+            (vector_distance <= 0.75) | exact_source,
         )
         if source_types:
             statement = statement.where(DocumentEmbeddingRow.source_type.in_(source_types))
@@ -292,6 +292,7 @@ class PostgresKnowledgeStore:
                 TranscriptEmbeddingRow.project_id == project_id,
                 TranscriptEmbeddingRow.acl_principals.op("&&")(list(auth.principals)),
                 TranscriptEmbeddingRow.embedding_model == self.embedder.model_id,
+                ~TranscriptEmbeddingRow.chunk_text.ilike("Scheduled meeting:%"),
             )
         )
         if meeting_id:

@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime, timedelta
 
 from ..models import AgentName, ChatRequest, ExecutionPlan, PlanStep
@@ -9,6 +10,54 @@ def previous_week(now: datetime) -> tuple[datetime, datetime]:
         hour=0, minute=0, second=0, microsecond=0
     )
     return current_monday - timedelta(days=7), current_monday
+
+
+_MONTHS = {
+    name: number
+    for number, names in enumerate(
+        (
+            (),
+            ("jan", "january"),
+            ("feb", "february"),
+            ("mar", "march"),
+            ("apr", "april"),
+            ("may",),
+            ("jun", "june"),
+            ("jul", "july"),
+            ("aug", "august"),
+            ("sep", "sept", "september"),
+            ("oct", "october"),
+            ("nov", "november"),
+            ("dec", "december"),
+        )
+    )
+    for name in names
+}
+
+
+def explicit_day(message: str, now: datetime) -> tuple[datetime, datetime] | None:
+    """Resolve common day/month forms for the deterministic offline planner."""
+    normalized = message.casefold()
+    patterns = (
+        r"\b(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+)(?:\s+(\d{4}))?\b",
+        r"\b([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\b",
+    )
+    for index, pattern in enumerate(patterns):
+        match = re.search(pattern, normalized)
+        if not match:
+            continue
+        day_text, month_text, year_text = (
+            match.groups() if index == 0 else (match.group(2), match.group(1), match.group(3))
+        )
+        month = _MONTHS.get(month_text)
+        if month is None:
+            continue
+        try:
+            start = datetime(int(year_text or now.year), month, int(day_text), tzinfo=UTC)
+        except ValueError:
+            return None
+        return start, start + timedelta(days=1)
+    return None
 
 
 def fixture_plan(request: ChatRequest, now: datetime | None = None) -> ExecutionPlan:
@@ -109,7 +158,10 @@ def fixture_plan(request: ChatRequest, now: datetime | None = None) -> Execution
         )
     )
     date_from = date_to = None
-    if "last week" in message:
+    explicit_range = explicit_day(message, now)
+    if explicit_range:
+        date_from, date_to = explicit_range
+    elif "last week" in message:
         date_from, date_to = previous_week(now)
     return ExecutionPlan(
         steps=steps,

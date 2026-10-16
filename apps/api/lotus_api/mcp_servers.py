@@ -5,11 +5,13 @@ from __future__ import annotations
 import secrets
 import threading
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from mcp.server.mcpserver import Context, MCPServer
 
-from .models import AuthContext, ChatRequest
+from .calendar import is_synthetic_calendar_placeholder
+from .models import AuthContext, ChatRequest, ExecutionPlan
 from .storage import get_store
 
 _INTERNAL_TOKEN = secrets.token_urlsafe(32)
@@ -21,12 +23,15 @@ _lock = threading.Lock()
 class McpRunContext:
     auth: AuthContext
     request: ChatRequest
+    plan: ExecutionPlan | None = None
 
 
-def register_run_context(auth: AuthContext, request: ChatRequest) -> tuple[str, dict[str, str]]:
+def register_run_context(
+    auth: AuthContext, request: ChatRequest, plan: ExecutionPlan | None = None
+) -> tuple[str, dict[str, str]]:
     context_id = uuid4().hex
     with _lock:
-        _contexts[context_id] = McpRunContext(auth=auth, request=request)
+        _contexts[context_id] = McpRunContext(auth=auth, request=request, plan=plan)
     return context_id, {
         "X-Lotus-Internal-MCP": _INTERNAL_TOKEN,
         "X-Lotus-Run-Context": context_id,
@@ -57,6 +62,15 @@ def _bounded_evidence(rows) -> list[dict]:
         payload["snippet"] = payload["snippet"][:1_500]
         result.append(payload)
     return result
+
+
+def _tool_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed
 
 
 planner_mcp = MCPServer(
@@ -103,24 +117,109 @@ def get_project_stakeholders(project_id: str, ctx: Context) -> dict:
     }
 
 
+@planner_mcp.tool()
+def search_planning_items(
+    query: str,
+    ctx: Context,
+    status: str | None = None,
+    team_id: str | None = None,
+    assignee_id: str | None = None,
+    priority: str | None = None,
+    limit: int = 20,
+) -> dict:
+    """Filter and count authorized planning items without semantic/vector retrieval."""
+    run = _run_context(ctx)
+    rows = get_store().list_board_issues(run.auth, run.request.project_id, team_id)
+    if status:
+        expected = status.strip().casefold().replace("-", "_").replace(" ", "_")
+        rows = [row for row in rows if row.status.casefold() == expected]
+    if assignee_id:
+        rows = [row for row in rows if row.assignee_id.casefold() == assignee_id.casefold()]
+    if priority:
+        rows = [row for row in rows if row.priority.casefold() == priority.casefold()]
+    normalized_query = query.strip().casefold()
+    if normalized_query:
+        rows = [
+            row
+            for row in rows
+            if normalized_query
+            in f"{row.issue_key} {row.title} {row.description} {row.feature_title}".casefold()
+        ]
+    bounded_limit = min(max(limit, 1), 50)
+    return {
+        "count": len(rows),
+        "planning_items": [row.model_dump(mode="json") for row in rows[:bounded_limit]],
+    }
+
+
 @calendar_mcp.tool()
 def get_meeting(meeting_id: str, ctx: Context) -> dict:
-    """Get one authorized meeting, its bounded transcript, and analysis."""
+    """Get one authorized calendar event and real transcript/analysis when available."""
     run = _run_context(ctx)
     record = get_store().get_meeting(meeting_id, run.auth)
-    if record is None:
-        return {"meeting": None}
-    payload = record.model_dump(mode="json")
-    payload["transcript"]["segments"] = [
-        {**segment, "text": segment["text"][:1_500]}
-        for segment in payload["transcript"]["segments"][:40]
-    ]
-    return {"meeting": payload}
+    calendar_event = next(
+        (
+            event
+            for event in get_store().list_calendar_events(
+                run.auth, run.request.project_id
+            )
+            if event.meeting_id == meeting_id or event.event_id == meeting_id
+        ),
+        None,
+    )
+    transcript_available = record is not None and not is_synthetic_calendar_placeholder(record)
+    payload = None
+    if transcript_available and record is not None:
+        payload = record.model_dump(mode="json")
+        payload["transcript"]["segments"] = [
+            {**segment, "text": segment["text"][:1_500]}
+            for segment in payload["transcript"]["segments"][:40]
+        ]
+    return {
+        "calendar_event": calendar_event.model_dump(mode="json") if calendar_event else None,
+        "meeting": payload,
+        "transcript_available": transcript_available,
+    }
 
 
 @calendar_mcp.tool()
-def search_meetings(query: str, ctx: Context) -> dict:
-    """Search authorized meeting transcript chunks using the current project scope."""
+def search_meetings(
+    query: str,
+    ctx: Context,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 20,
+) -> dict:
+    """List and count calendar meetings by arbitrary ISO date range and optional title text."""
+    run = _run_context(ctx)
+    plan_from = run.plan.date_from if run.plan else None
+    plan_to = run.plan.date_to if run.plan else None
+    rows = get_store().list_calendar_events(
+        run.auth,
+        run.request.project_id,
+        date_from=plan_from or _tool_datetime(date_from),
+        date_to=plan_to or _tool_datetime(date_to),
+    )
+    rows = [row for row in rows if not row.canceled]
+    title_query = query.strip().casefold()
+    if title_query:
+        title_matches = [
+            row
+            for row in rows
+            if title_query in f"{row.title} {row.description}".casefold()
+        ]
+        if title_matches:
+            rows = title_matches
+    bounded_limit = min(max(limit, 1), 50)
+    return {
+        "count": len(rows),
+        "meetings": [row.model_dump(mode="json") for row in rows[:bounded_limit]],
+    }
+
+
+@calendar_mcp.tool()
+def search_transcript_chunks(query: str, ctx: Context) -> dict:
+    """Semantically search transcript text for a topic, quote, or discussion detail."""
     run = _run_context(ctx)
     rows = get_store().search_transcripts(
         query,
@@ -128,6 +227,8 @@ def search_meetings(query: str, ctx: Context) -> dict:
         run.request.project_id,
         top_k=8,
         meeting_id=run.request.meeting_id,
+        date_from=run.plan.date_from if run.plan else None,
+        date_to=run.plan.date_to if run.plan else None,
     )
     return {"evidence": _bounded_evidence(rows)}
 
@@ -140,15 +241,83 @@ def get_document(document_id: str, ctx: Context) -> dict:
     matches = [row for row in rows if row["source_id"].casefold() == document_id.casefold()]
     return {
         "document": [
-            {**row, "chunk_text": row["chunk_text"][:1_500]}
+            {
+                "document_id": row["source_id"],
+                "title": row["title"],
+                "team": row["team"],
+                "source_system": row["source_system"],
+                "source_type": row["source_type"],
+                "source_uri": row.get("source_uri"),
+                "section": row.get("section_path"),
+                "content": row["chunk_text"][:1_500],
+                "updated_at": (
+                    row["source_updated_at"].isoformat()
+                    if isinstance(row.get("source_updated_at"), datetime)
+                    else row.get("source_updated_at")
+                ),
+            }
             for row in matches[:12]
         ]
     }
 
 
 @documents_mcp.tool()
+def list_documents(
+    query: str,
+    ctx: Context,
+    team: str | None = None,
+    source_type: str | None = None,
+    limit: int = 20,
+) -> dict:
+    """List and count authorized document metadata without embedding retrieval."""
+    run = _run_context(ctx)
+    chunks = get_store().list_knowledge_document_chunks(run.auth, run.request.project_id)
+    documents: dict[str, dict] = {}
+    for row in chunks:
+        if team and row["team"].casefold() != team.casefold():
+            continue
+        if source_type and row["source_type"].casefold() != source_type.casefold():
+            continue
+        entry = documents.setdefault(
+            row["source_id"],
+            {
+                "document_id": row["source_id"],
+                "title": row["title"],
+                "team": row["team"],
+                "source_system": row["source_system"],
+                "source_type": row["source_type"],
+                "source_uri": row.get("source_uri"),
+                "updated_at": (
+                    row["source_updated_at"].isoformat()
+                    if isinstance(row.get("source_updated_at"), datetime)
+                    else row.get("source_updated_at")
+                ),
+                "sections": [],
+            },
+        )
+        section = row.get("section_path")
+        if section and section not in entry["sections"]:
+            entry["sections"].append(section)
+    rows = list(documents.values())
+    normalized_query = query.strip().casefold()
+    if normalized_query:
+        rows = [
+            row
+            for row in rows
+            if normalized_query
+            in (
+                f"{row['document_id']} {row['title']} {row['team']} "
+                f"{row['source_system']} {row['source_type']}"
+            ).casefold()
+        ]
+    rows.sort(key=lambda row: (row["title"].casefold(), row["document_id"]))
+    bounded_limit = min(max(limit, 1), 50)
+    return {"count": len(rows), "documents": rows[:bounded_limit]}
+
+
+@documents_mcp.tool()
 def search_documents(query: str, ctx: Context) -> dict:
-    """Search authorized document chunks using the current project scope."""
+    """Semantically search authorized document content using the current project scope."""
     run = _run_context(ctx)
     rows = get_store().search_documents(query, run.auth, run.request.project_id, top_k=8)
     return {"evidence": _bounded_evidence(rows)}

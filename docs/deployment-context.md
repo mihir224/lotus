@@ -69,3 +69,8 @@ but no authorized client networks; Cloud Run connects through its `/cloudsql/<in
 socket. Never commit `.env`, OAuth secrets, database passwords, ADC files, or service-account keys.
 Never log a resolved database URL, SQL parameters, prompts, transcript text, bearer tokens, or
 credentials. Prompt and response content capture in Cloud Trace stays disabled.
+
+Run migration and seed jobs before every candidate revision even when no new fixture rows are
+expected. The API must remain compatible with legacy Cloud SQL rows: historical synthetic
+`Scheduled meeting: …` transcript placeholders are ignored at retrieval time rather than treated as
+real meeting content. Newly created calendar events no longer create such rows.

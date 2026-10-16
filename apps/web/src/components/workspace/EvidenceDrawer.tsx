@@ -11,6 +11,9 @@ type EvidenceDrawerProps = {
 };
 
 export function EvidenceDrawer({ answer, events, activeTab, onTabChange }: EvidenceDrawerProps) {
+  const runNodeCount = new Set(
+    events.flatMap((item) => (item.node_id ? [item.node_id] : []))
+  ).size;
   return (
     <aside className="evidence" aria-label="Evidence drawer">
       <div className="drawer-head">
@@ -18,7 +21,9 @@ export function EvidenceDrawer({ answer, events, activeTab, onTabChange }: Evide
           <button className={activeTab === "evidence" ? "active" : ""} onClick={() => onTabChange("evidence")}>Evidence</button>
           <button className={activeTab === "run" ? "active" : ""} onClick={() => onTabChange("run")}>Run</button>
         </div>
-        <span>{activeTab === "evidence" ? answer?.evidence.length ?? 0 : events.filter((item) => item.node_id).length}</span>
+        <span aria-label={activeTab === "evidence" ? "Evidence count" : "Run node count"}>
+          {activeTab === "evidence" ? answer?.evidence.length ?? 0 : runNodeCount}
+        </span>
       </div>
       {activeTab === "run" ? (
         <RunInspector events={events} />

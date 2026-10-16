@@ -11,21 +11,39 @@
 ## Orchestration contract
 
 `agents/orchestrator.py` owns controlled execution. In `agent_platform` mode, the Google ADK
-Planner produces an `ExecutionPlan`; independent Documents, Planning, Meeting, and Web work runs concurrently;
-Anomaly runs only after Meeting; Result runs last. A conversational request may validly use only
-Result. If Planner times out, use the safe Result-only degraded plan—never retrieve arbitrary data.
+Planner produces an `ExecutionPlan`; independent Documents, Planning, Meeting, Web, and Code work
+runs concurrently; Anomaly runs only after Meeting; Result runs last. A conversational request may
+validly use only Result. If Planner times out, use the safe Result-only degraded plan—never retrieve
+arbitrary data.
 
 Current live boundaries:
 
 - Planner and Result are ADK/Gemini agents.
 - Web uses the ADK Google Search tool and converts grounding metadata to `Evidence`.
 - Documents, Planning, and Meeting are ADK specialists using scoped internal Streamable HTTP MCP tools.
+- Code is a read-only specialist over the authorized repositories packaged under `demo_data/code`.
 - Anomaly reads stored meeting analysis; deterministic transcript analysis lives in
   `meeting_analysis.py`.
 - Every ADK call has a bounded timeout. Preserve safe fallbacks and related logs.
 
 Fixture mode uses `fixture_plan`, deterministic normalized hash embeddings, fixture web results,
 and deterministic answer composition. Do not make fixture tests call Google.
+
+## Specialist tool selection
+
+The specialist chooses the narrow tool after the Planner chooses the specialist:
+
+- Documents MCP: `list_documents` for inventories/counts, `get_document` for a known ID, and
+  `search_documents` only for semantic content retrieval.
+- Planner MCP: `get_project`, `get_planning_item`, `get_project_stakeholders`, and structured
+  `search_planning_items`; Planning never uses vector retrieval.
+- Calendar MCP: `search_meetings` for arbitrary date ranges, counts, titles, and metadata;
+  `get_meeting` for one selected meeting; `search_transcript_chunks` only for topics, quotes,
+  keywords, or discussion content.
+
+Do not reintroduce keyword routing in the live path. Deterministic phrase/date handling is an
+offline fixture fallback only. MCP scope comes from trusted run context, never model-supplied tenant
+or ACL values.
 
 ## Storage invariants
 
@@ -47,6 +65,21 @@ ordering by cosine distance. Transcript evidence MUST retain meeting ID and time
 integration runs use `STORE_BACKEND=postgres`. Raw files under `demo_data` are bootstrap inputs,
 not an API-time retrieval fallback. Seeding MUST remain idempotent for each embedding model.
 
+Calendar creation stores only `calendar_events`. It MUST NOT fabricate a transcript or mark a
+scheduled event as processed. A `meeting_transcripts` row is created only when transcript content is
+processed. Legacy one-line `Scheduled meeting: …` placeholders are excluded from MCP details and
+transcript vector search.
+
+## Conversations and run events
+
+`chat_sessions` and `chat_messages` are user-and-tenant scoped. Missing `session_id` creates a new
+conversation; clients restore history with the explicit session APIs. Planner and Result receive
+only the bounded recent-message window.
+
+SSE run events merge `node.started` and `node.completed` in the UI. Tool events may expose bounded
+query and filter inputs plus count-oriented outputs in Debug Mode. Continue redacting credentials,
+authorization headers, system prompts, full transcripts, vectors, and unrestricted payloads.
+
 ## Authentication and abuse control
 
 `AUTH_MODE=dev` trusts local `X-Lotus-*` headers. `AUTH_MODE=google` requires a server-verified
@@ -66,5 +99,6 @@ Preserve `POST /v1/chat/messages` fields and evidence shape. Calendar and meetin
 
 Use the `uvicorn.error.lotus` logger hierarchy. Log request/execution IDs, selected agents, counts,
 durations, timeouts, and failures. Never log full prompts, transcripts, bearer tokens, credentials,
-or vector contents.
+or vector contents. Bounded tool-input previews are sent only in authenticated SSE debug events;
+they are not an authorization input and must not be copied into backend logs or traces.
 

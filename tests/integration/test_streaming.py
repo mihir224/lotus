@@ -42,4 +42,20 @@ def test_stream_orders_planner_tools_result_and_answer() -> None:
         if event["event_type"] == "node.completed" and event["node_id"] == "documents"
     )
     assert planner_done < documents_started < documents_done < result_started
+    tool_started = next(
+        event
+        for event in events
+        if event["event_type"] == "node.started"
+        and event["node_id"] == "documents.documents_mcp"
+    )
+    assert tool_started["input_preview"] == {
+        "query": "Show the checkout retry architecture document",
+        "project_id": "payments",
+        "meeting_id": None,
+        "repository_id": None,
+        "planning_item_ids": [],
+        "document_ids": [],
+        "date_from": None,
+        "date_to": None,
+    }
     assert events[-1]["response"]["execution_id"] == events[0]["execution_id"]
