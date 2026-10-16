@@ -1,8 +1,8 @@
 import type { CalendarEvent, MeetingRecord } from "../../types";
 import { authHeaders } from "../../auth";
 
-export const DEMO_RECORDING_SRC =
-  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
+/** Bundled clip for all fixture meeting recordings (apps/web/public). */
+export const DEMO_RECORDING_SRC = "/team_discussion.mp4";
 
 export function resolveRecordingUrl(recordingUrl: string | null | undefined) {
   if (!recordingUrl || recordingUrl.startsWith("fixture://")) return DEMO_RECORDING_SRC;
