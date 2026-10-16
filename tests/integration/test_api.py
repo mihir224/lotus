@@ -237,6 +237,31 @@ def test_docs_catalog_search_and_create() -> None:
     }
     assert source_id in ids
 
+    updated = client.put(
+        f"/v1/docs/sources/{source_id}",
+        params={"project_id": "payments"},
+        json={
+            "title": "Updated onboarding note",
+            "team": "Platform",
+            "source_type": "runbook",
+            "body": "New hires should start with the resilience runbook.",
+        },
+    )
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "Updated onboarding note"
+    assert updated.json()["source_type"] == "runbook"
+
+    deleted = client.delete(
+        f"/v1/docs/sources/{source_id}",
+        params={"project_id": "payments"},
+    )
+    assert deleted.status_code == 204
+    missing = client.get(
+        f"/v1/docs/sources/{source_id}",
+        params={"project_id": "payments"},
+    )
+    assert missing.status_code == 404
+
 
 def test_create_work_board_issue() -> None:
     created = client.post(

@@ -17,7 +17,14 @@ from fastapi.staticfiles import StaticFiles
 from .auth import get_auth_context
 from .calendar import create_calendar_event, list_calendar_events
 from .config import get_settings
-from .docs import create_doc_source, get_doc_page, get_docs_catalog, search_docs
+from .docs import (
+    create_doc_source,
+    delete_doc_source,
+    get_doc_page,
+    get_docs_catalog,
+    search_docs,
+    update_doc_source,
+)
 from .mcp_servers import (
     calendar_mcp_app,
     documents_mcp_app,
@@ -43,6 +50,7 @@ from .models import (
     DocPageDetail,
     DocSearchHit,
     DocSourceCreate,
+    DocSourceUpdate,
     GroundedAnswer,
     MeetingListItem,
     MeetingRecord,
@@ -405,6 +413,34 @@ def docs_create_endpoint(
         return create_doc_source(get_store(), auth, payload)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.put("/v1/docs/sources/{source_id}", response_model=DocPageDetail)
+def docs_update_endpoint(
+    source_id: str,
+    payload: DocSourceUpdate,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+    project_id: str = "payments",
+) -> DocPageDetail:
+    try:
+        return update_doc_source(get_store(), auth, project_id, source_id, payload)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Document not found") from None
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.delete("/v1/docs/sources/{source_id}", status_code=204)
+def docs_delete_endpoint(
+    source_id: str,
+    auth: Annotated[AuthContext, Depends(get_auth_context)],
+    project_id: str = "payments",
+) -> Response:
+    try:
+        delete_doc_source(get_store(), auth, project_id, source_id)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Document not found") from None
+    return Response(status_code=204)
 
 
 @app.get("/v1/meetings", response_model=list[MeetingListItem])

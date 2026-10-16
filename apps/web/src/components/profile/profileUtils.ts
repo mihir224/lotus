@@ -14,3 +14,19 @@ export function profileInitials(name: string | null, email: string | null): stri
   }
   return source.slice(0, 2).toUpperCase();
 }
+
+const DEMO_DESIGNATIONS = [
+  "Senior Software Engineer",
+  "Product Manager",
+  "Solutions Architect",
+  "Engineering Manager",
+  "Platform Engineer",
+  "Technical Program Manager"
+] as const;
+
+export function profileDesignation(userId: string, current: string | null): string {
+  if (current?.trim()) return current;
+  let hash = 0;
+  for (const character of userId) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return DEMO_DESIGNATIONS[hash % DEMO_DESIGNATIONS.length];
+}

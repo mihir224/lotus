@@ -217,7 +217,6 @@ export function WorkBoardView({
             >
               <header className="board-column-head">
                 <div className="board-column-title">
-                  <span className={`board-column-dot ${column.dotClass}`} aria-hidden="true" />
                   <h2>{column.label}</h2>
                 </div>
                 <span className="board-count">{cards.length}</span>

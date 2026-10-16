@@ -479,6 +479,13 @@ class DocSourceCreate(StrictModel):
     body: str = Field(min_length=1, max_length=50_000)
 
 
+class DocSourceUpdate(StrictModel):
+    title: str = Field(min_length=1, max_length=240)
+    team: str = Field(min_length=1, max_length=120)
+    source_type: DocSourceType
+    body: str = Field(min_length=1, max_length=50_000)
+
+
 class RunEvent(StrictModel):
     event_type: Literal[
         "run.started",

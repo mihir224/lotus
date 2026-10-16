@@ -766,6 +766,28 @@ class PostgresKnowledgeStore:
             session.refresh(row)
             return self._document_row_to_dict(row)
 
+    def delete_knowledge_document_source(
+        self,
+        auth: AuthContext,
+        project_id: str,
+        source_id: str,
+    ) -> bool:
+        statement = select(DocumentEmbeddingRow).where(
+            DocumentEmbeddingRow.tenant_id == auth.tenant_id,
+            DocumentEmbeddingRow.project_id == project_id,
+            DocumentEmbeddingRow.source_id == source_id,
+            DocumentEmbeddingRow.acl_principals.op("&&")(list(auth.principals)),
+            DocumentEmbeddingRow.embedding_model == self.embedder.model_id,
+        )
+        with Session(self.engine) as session:
+            rows = session.scalars(statement).all()
+            if not rows:
+                return False
+            for row in rows:
+                session.delete(row)
+            session.commit()
+            return True
+
     @staticmethod
     def _session_summary(row: ChatSessionRow) -> ChatSessionSummary:
         return ChatSessionSummary(

@@ -58,7 +58,7 @@ type Props = {
 export function AIWorkspace(props: Props) {
   const empty = props.messages.length === 0 && !props.streamedAnswer;
   return <div className="chat-workspace">
-    <header className="chat-header"><div><p className="eyebrow">AI workspace</p><h1>Lotus</h1></div><div className="chat-header-actions"><button type="button" className="history-trigger" onClick={props.onNewConversation} aria-label="Start new chat" title="New chat"><PlusIcon /></button><button type="button" className="history-trigger" onClick={props.onOpenHistory} aria-label="Open chat history" title="Chat history"><HistoryIcon /></button></div></header>
+    <header className="chat-header"><div><p className="eyebrow">Lotus AI workspace</p><h1>Iris</h1></div><div className="chat-header-actions"><button type="button" className="history-trigger" onClick={props.onNewConversation} aria-label="Start new chat" title="New chat"><PlusIcon /></button><button type="button" className="history-trigger" onClick={props.onOpenHistory} aria-label="Open chat history" title="Chat history"><HistoryIcon /></button></div></header>
     <div className="chat-scroll" aria-live="polite">
       {empty && <><div className="intro"><h2>What do you need to understand?</h2><p>Ask across projects, documents, meetings, repositories, and public research.</p></div><div className="suggestions">{suggestions.map((item) => <button type="button" onClick={() => props.onMessageChange(item)} key={item}>{item}</button>)}</div></>}
       <div className="message-thread">

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CreateDocModal } from "./CreateDocModal";
+import { DocEditorModal, type DocDraft } from "./CreateDocModal";
 import { formatShortDate } from "../../utils/formatDate";
 import { docTypeClass, docTypeLabel } from "./docConstants";
 import {
   createDoc,
+  deleteDoc,
   fetchDocPage,
   fetchDocsCatalog,
   searchDocs,
+  updateDoc,
   type DocCatalog,
   type DocPage,
   type DocSearchHit
@@ -23,6 +25,7 @@ export function DocsView({ initialDocumentId }: { initialDocumentId?: string | n
   const [searchResults, setSearchResults] = useState<DocSearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(() => new Set());
 
   const loadCatalog = useCallback(async () => {
@@ -108,6 +111,28 @@ export function DocsView({ initialDocumentId }: { initialDocumentId?: string | n
     await openPage(created.source_id);
   }
 
+  async function handleUpdate(draft: DocDraft) {
+    if (!page) return;
+    const updated = await updateDoc(page.source_id, draft);
+    setPage(updated);
+    await loadCatalog();
+  }
+
+  async function handleDelete() {
+    if (!page) return;
+    const confirmed = window.confirm(`Delete “${page.title}”? This cannot be undone.`);
+    if (!confirmed) return;
+    setError(null);
+    try {
+      await deleteDoc(page.source_id);
+      setPage(null);
+      setSelectedId(null);
+      await loadCatalog();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to delete document");
+    }
+  }
+
   const showSearchPanel = search.trim().length > 0;
 
   if (loading && !catalog) {
@@ -165,7 +190,6 @@ export function DocsView({ initialDocumentId }: { initialDocumentId?: string | n
                     {expanded ? "▾" : "▸"}
                   </span>
                   {group.team}
-                  <span className="docs-sidebar-count">{group.pages.length}</span>
                 </button>
                 {expanded && (
                   <ul className="docs-sidebar-list">
@@ -179,9 +203,6 @@ export function DocsView({ initialDocumentId }: { initialDocumentId?: string | n
                           onClick={() => void openPage(item.source_id)}
                         >
                           <span className="docs-sidebar-link-title">{item.title}</span>
-                          <span className={`docs-type-chip ${docTypeClass(item.source_type)}`}>
-                            {docTypeLabel(item.source_type)}
-                          </span>
                         </button>
                       </li>
                     ))}
@@ -209,12 +230,7 @@ export function DocsView({ initialDocumentId }: { initialDocumentId?: string | n
                       className="docs-search-card"
                       onClick={() => void openPage(hit.source_id)}
                     >
-                      <div className="docs-search-card-head">
-                        <h3>{hit.title}</h3>
-                        <span className={`docs-type-chip ${docTypeClass(hit.source_type)}`}>
-                          {docTypeLabel(hit.source_type)}
-                        </span>
-                      </div>
+                      <div className="docs-search-card-head"><h3>{hit.title}</h3></div>
                       <p className="docs-search-meta">
                         {hit.team} · {hit.source_id}
                       </p>
@@ -229,10 +245,18 @@ export function DocsView({ initialDocumentId }: { initialDocumentId?: string | n
           ) : page ? (
             <article className="docs-article">
               <header className="docs-article-head">
-                <p className="docs-article-breadcrumb">
-                  {page.team} / <span>{page.source_id}</span>
-                </p>
-                <h2>{page.title}</h2>
+                <div className="docs-article-title-row">
+                  <div>
+                    <p className="docs-article-breadcrumb">
+                      {page.team} / <span>{page.source_id}</span>
+                    </p>
+                    <h2>{page.title}</h2>
+                  </div>
+                  <div className="docs-article-actions">
+                    <button type="button" className="board-secondary-btn" onClick={() => setEditOpen(true)}>Edit</button>
+                    <button type="button" className="docs-delete-btn" onClick={() => void handleDelete()}>Delete</button>
+                  </div>
+                </div>
                 <div className="docs-article-meta">
                   <span className={`docs-type-chip ${docTypeClass(page.source_type)}`}>
                     {docTypeLabel(page.source_type)}
@@ -260,11 +284,20 @@ export function DocsView({ initialDocumentId }: { initialDocumentId?: string | n
         </main>
       </div>
 
-      <CreateDocModal
+      <DocEditorModal
         open={createOpen}
+        mode="create"
         teamOptions={teamOptions}
         onClose={() => setCreateOpen(false)}
-        onCreate={handleCreate}
+        onSave={handleCreate}
+      />
+      <DocEditorModal
+        open={editOpen}
+        mode="edit"
+        initialValue={page ?? undefined}
+        teamOptions={teamOptions}
+        onClose={() => setEditOpen(false)}
+        onSave={handleUpdate}
       />
     </div>
   );

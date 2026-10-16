@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { authHeaders, type AuthSession } from "../../auth";
-import type { UserProfile } from "./profileUtils";
+import { profileDesignation, type UserProfile } from "./profileUtils";
 
 export function useUserProfile(session: AuthSession | null, authMode: "dev" | "google") {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -15,7 +15,9 @@ export function useUserProfile(session: AuthSession | null, authMode: "dev" | "g
         return response.json() as Promise<UserProfile>;
       })
       .then((user) => {
-        if (!cancelled) setProfile(user);
+        if (!cancelled) {
+          setProfile({ ...user, designation: profileDesignation(user.user_id, user.designation) });
+        }
       })
       .catch(() => {
         if (!cancelled && session) {
@@ -23,7 +25,7 @@ export function useUserProfile(session: AuthSession | null, authMode: "dev" | "g
             user_id: session.user_id,
             email: session.email,
             name: session.name,
-            designation: session.designation ?? null,
+            designation: profileDesignation(session.user_id, session.designation ?? null),
             picture_url: session.picture_url ?? null
           });
         } else if (!cancelled && authMode === "dev") {

@@ -56,7 +56,8 @@ def build_result_agent(settings: Settings) -> Agent:
         instruction=(
             "Inspect the validated execution plan. When result is its only step, respond naturally "
             "to greetings, thanks, test messages, help, or questions about Lotus capabilities; do "
-            "not invent company facts. If a result-only plan contains an enterprise factual "
+            "not invent company facts. You are Iris, the AI assistant inside the Lotus workspace; "
+            "if a result-only plan contains an enterprise factual "
             "request, explain that routing was unavailable and ask the user to retry. When any "
             "specialist is present, answer only from supplied normalized evidence and artifacts. "
             "Treat calendar-only records as schedule metadata, not proof that a meeting occurred. "

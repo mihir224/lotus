@@ -488,6 +488,21 @@ class MemoryKnowledgeStore:
         self.documents[row["chunk_id"]] = row
         return row
 
+    def delete_knowledge_document_source(
+        self,
+        auth: AuthContext,
+        project_id: str,
+        source_id: str,
+    ) -> bool:
+        chunk_ids = [
+            chunk_id
+            for chunk_id, row in self.documents.items()
+            if row.get("source_id") == source_id and _allowed(row, auth, project_id)
+        ]
+        for chunk_id in chunk_ids:
+            del self.documents[chunk_id]
+        return bool(chunk_ids)
+
     def create_chat_session(
         self, auth: AuthContext, project_id: str, session_id: str | None = None
     ) -> ChatSessionSummary:

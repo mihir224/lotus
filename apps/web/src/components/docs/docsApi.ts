@@ -47,6 +47,8 @@ export type DocCreatePayload = {
   body: string;
 };
 
+export type DocUpdatePayload = DocCreatePayload;
+
 const PROJECT_ID = "payments";
 
 export async function fetchDocsCatalog(): Promise<DocCatalog> {
@@ -90,4 +92,30 @@ export async function createDoc(payload: DocCreatePayload): Promise<DocPage> {
     throw new Error(detail);
   }
   return response.json() as Promise<DocPage>;
+}
+
+export async function updateDoc(
+  sourceId: string,
+  payload: DocUpdatePayload
+): Promise<DocPage> {
+  const params = new URLSearchParams({ project_id: PROJECT_ID });
+  const response = await fetch(
+    `/v1/docs/sources/${encodeURIComponent(sourceId)}?${params}`,
+    {
+      method: "PUT",
+      headers: authHeaders(true),
+      body: JSON.stringify(payload)
+    }
+  );
+  if (!response.ok) throw new Error(`Update failed with ${response.status}`);
+  return response.json() as Promise<DocPage>;
+}
+
+export async function deleteDoc(sourceId: string): Promise<void> {
+  const params = new URLSearchParams({ project_id: PROJECT_ID });
+  const response = await fetch(
+    `/v1/docs/sources/${encodeURIComponent(sourceId)}?${params}`,
+    { method: "DELETE", headers: authHeaders() }
+  );
+  if (!response.ok) throw new Error(`Delete failed with ${response.status}`);
 }

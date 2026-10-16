@@ -1,25 +1,45 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { DOC_TYPE_OPTIONS } from "./docConstants";
 
-type CreateDocModalProps = {
-  open: boolean;
-  teamOptions: string[];
-  onClose: () => void;
-  onCreate: (draft: {
-    title: string;
-    team: string;
-    source_type: string;
-    body: string;
-  }) => Promise<void>;
+export type DocDraft = {
+  title: string;
+  team: string;
+  source_type: string;
+  body: string;
 };
 
-export function CreateDocModal({ open, teamOptions, onClose, onCreate }: CreateDocModalProps) {
+type DocEditorModalProps = {
+  open: boolean;
+  teamOptions: string[];
+  mode: "create" | "edit";
+  initialValue?: DocDraft;
+  onClose: () => void;
+  onSave: (draft: DocDraft) => Promise<void>;
+};
+
+export function DocEditorModal({
+  open,
+  teamOptions,
+  mode,
+  initialValue,
+  onClose,
+  onSave
+}: DocEditorModalProps) {
   const [title, setTitle] = useState("");
   const [team, setTeam] = useState(teamOptions[0] ?? "Platform");
   const [sourceType, setSourceType] = useState("guide");
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(initialValue?.title ?? "");
+    setTeam(initialValue?.team ?? teamOptions[0] ?? "Platform");
+    setSourceType(initialValue?.source_type ?? "guide");
+    setBody(initialValue?.body ?? "");
+    setError(null);
+  }, [open, initialValue, teamOptions]);
 
   if (!open) return null;
 
@@ -28,15 +48,12 @@ export function CreateDocModal({ open, teamOptions, onClose, onCreate }: CreateD
     setSaving(true);
     setError(null);
     try {
-      await onCreate({
+      await onSave({
         title: title.trim(),
         team: team.trim(),
         source_type: sourceType,
         body: body.trim()
       });
-      setTitle("");
-      setBody("");
-      setSourceType("guide");
       onClose();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to create document");
@@ -55,15 +72,14 @@ export function CreateDocModal({ open, teamOptions, onClose, onCreate }: CreateD
       >
         <form onSubmit={submit}>
           <header className="lotus-modal-head">
-            <span className="lotus-modal-icon" aria-hidden="true">
-              📄
-            </span>
+            <span className="lotus-modal-icon" aria-hidden="true">{mode === "edit" ? "✎" : "＋"}</span>
             <div className="lotus-modal-head-main">
-              <p className="lotus-modal-kicker">New document</p>
-              <h2 id="docs-create-title">Create a page</h2>
+              <p className="lotus-modal-kicker">{mode === "edit" ? "Edit document" : "New document"}</p>
+              <h2 id="docs-create-title">{mode === "edit" ? "Update page" : "Create a page"}</h2>
               <p className="lotus-modal-desc">
-                Add a new document to your workspace. You can create a guide, runbook, or add any
-                other type of documentation.
+                {mode === "edit"
+                  ? "Update this document and refresh its searchable representation."
+                  : "Add a new guide, runbook, or other document to your workspace."}
               </p>
             </div>
             <button type="button" className="lotus-modal-close" onClick={onClose} aria-label="Close">
@@ -132,7 +148,7 @@ export function CreateDocModal({ open, teamOptions, onClose, onCreate }: CreateD
               Cancel
             </button>
             <button type="submit" className="lotus-modal-btn-primary" disabled={saving}>
-              📄 {saving ? "Creating…" : "Create document"}
+              {saving ? "Saving…" : mode === "edit" ? "Save changes" : "Create document"}
               <span className="lotus-modal-btn-arrow" aria-hidden="true">
                 →
               </span>

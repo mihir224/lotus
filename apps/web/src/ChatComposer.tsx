@@ -26,7 +26,7 @@ export function ChatComposer({
   return (
     <form className="composer" onSubmit={submit}>
       <textarea
-        aria-label="Ask Lotus"
+        aria-label="Ask Iris"
         placeholder="Ask about projects, documents, meetings, research, or code…"
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -38,7 +38,7 @@ export function ChatComposer({
         {loading ? (
           <button type="button" onClick={onCancel}>Cancel</button>
         ) : (
-          <button type="submit" disabled={!value.trim()}>Ask Lotus</button>
+          <button type="submit" disabled={!value.trim()}>Ask Iris</button>
         )}
       </div>
     </form>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LotusLogo } from "./components/navigation/LotusLogo";
 
 export interface AuthConfig {
   mode: "dev" | "google";
@@ -145,7 +146,7 @@ export function GoogleLogin({ clientId, onAuthenticated }: GoogleLoginProps) {
   return (
     <main className="login-shell">
       <section className="login-card">
-        <div className="lotus-mark" aria-hidden="true">✦</div>
+        <LotusLogo />
         <p className="eyebrow">Protected enterprise workspace</p>
         <h1>Sign in to Lotus</h1>
         <p>Use an approved Google account to access agents, meetings, and company knowledge.</p>

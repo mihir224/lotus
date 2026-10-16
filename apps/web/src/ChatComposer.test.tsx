@@ -12,7 +12,7 @@ describe("ChatComposer", () => {
     render(
       <ChatComposer value="" loading={false} onChange={() => undefined} onSubmit={submit} onCancel={() => undefined} />
     );
-    const input = screen.getByLabelText("Ask Lotus");
+    const input = screen.getByLabelText("Ask Iris");
     expect(input).toHaveAttribute("placeholder");
     fireEvent.keyDown(input, { key: "Enter" });
     expect(submit).toHaveBeenCalledOnce();
@@ -23,7 +23,7 @@ describe("ChatComposer", () => {
     render(
       <ChatComposer value="question" loading={false} onChange={() => undefined} onSubmit={submit} onCancel={() => undefined} />
     );
-    fireEvent.keyDown(screen.getByLabelText("Ask Lotus"), { key: "Enter", shiftKey: true });
+    fireEvent.keyDown(screen.getByLabelText("Ask Iris"), { key: "Enter", shiftKey: true });
     expect(submit).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ import { streamChat } from "./chatStream";
 import { CalendarView } from "./components/calendar/CalendarView";
 import { DocsView } from "./components/docs/DocsView";
 import { AppRail } from "./components/navigation/AppRail";
+import { LotusLogo } from "./components/navigation/LotusLogo";
 import type { AppSection } from "./components/navigation/types";
 import { ProfileAvatar } from "./components/profile/ProfileAvatar";
 import { ProfilePanel } from "./components/profile/ProfilePanel";
@@ -163,7 +164,7 @@ export function App() {
   const mainContent = activeSection === "work-board" ? <WorkBoardView initialProjectId={projectTarget} initialIssueKey={issueTarget} /> : activeSection === "docs" ? <DocsView initialDocumentId={documentTarget} /> : activeSection === "calendar" ? <CalendarView today={new Date()} initialMeetingId={meetingTarget} /> : activeSection === "chats" ? <ChatsView /> : <AIWorkspace message={message} messages={messages} streamedAnswer={streamedAnswer} loading={loading} error={error} theme={theme} debugEnabled={debugEnabled} onMessageChange={setMessage} onSubmit={submit} onCancel={() => controllerRef.current?.abort()} onOpenHistory={() => void openHistory()} onNewConversation={() => void newConversation()} onNavigate={navigate} />;
 
   return <main className="shell">
-    <header className="topbar"><div className="brand"><div className="lotus-mark" aria-hidden="true">✦</div><div><strong>Lotus</strong><span>Enterprise workspace</span></div></div>{profile && <button type="button" className="profile-topbar-btn" aria-label="Open profile" onClick={() => setProfileOpen(true)}><ProfileAvatar profile={profile} size={40} /></button>}</header>
+    <header className="topbar"><div className="brand"><LotusLogo /><div><strong>Lotus</strong><span>Enterprise workspace</span></div></div>{profile && <button type="button" className="profile-topbar-btn" aria-label="Open profile" onClick={() => setProfileOpen(true)}><ProfileAvatar profile={profile} size={40} /></button>}</header>
     {profile && <ProfilePanel open={profileOpen} profile={profile} theme={theme} onThemeChange={setTheme} onClose={() => setProfileOpen(false)} showSignOut={authConfig.mode === "google" && Boolean(session)} onSignOut={() => { signOut(); setSession(null); setProfileOpen(false); }} />}
     <section className={`workspace${activeSection === "agent" && debugEnabled ? "" : " workspace-two-col"}`}><AppRail activeSection={activeSection} onSelect={(section) => { setActiveSection(section); window.history.pushState({}, "", section === "agent" ? agentLocation(chatSessionId) : `?section=${section}`); }} /><section className={`conversation conversation-${activeSection}${activeSection === "chats" ? " conversation-chats" : ""}`}>{mainContent}</section>{activeSection === "agent" && debugEnabled && <EvidenceDrawer answer={answer} events={runEvents} activeTab={drawerTab} onTabChange={setDrawerTab} />}</section>
     <ChatHistoryDialog open={historyOpen} sessions={sessions} currentSessionId={chatSessionId} loading={historyLoading} onClose={() => setHistoryOpen(false)} onOpen={(id) => void openConversation(id)} onDelete={(id) => void removeConversation(id)} />

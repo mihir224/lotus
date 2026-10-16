@@ -9,6 +9,7 @@ from .models import (
     DocSearchHit,
     DocSourceCreate,
     DocSourceSummary,
+    DocSourceUpdate,
     DocTeamGroup,
 )
 from .storage.base import KnowledgeStore
@@ -190,3 +191,67 @@ def create_doc_source(
         body=body,
         updated_at=now.isoformat(),
     )
+
+
+def update_doc_source(
+    store: KnowledgeStore,
+    auth: AuthContext,
+    project_id: str,
+    source_id: str,
+    payload: DocSourceUpdate,
+) -> DocPageDetail:
+    source_rows = [
+        row
+        for row in _chunk_rows(store, auth, project_id)
+        if row["source_id"] == source_id
+    ]
+    if not source_rows:
+        raise LookupError(source_id)
+    current = get_doc_page(store, auth, project_id, source_id)
+    title = payload.title.strip()
+    team = payload.team.strip()
+    body = payload.body.strip()
+    if not title or not team or not body:
+        raise ValueError("Title, team, and body are required")
+    if not store.delete_knowledge_document_source(auth, project_id, source_id):
+        raise LookupError(source_id)
+    now = datetime.now(UTC)
+    row = {
+        "chunk_id": f"{source_id}-001",
+        "tenant_id": auth.tenant_id,
+        "project_id": project_id,
+        "team": team,
+        "source_system": current.source_system,
+        "source_type": payload.source_type,
+        "source_id": source_id,
+        "source_uri": current.source_uri,
+        "title": title,
+        "section_path": "Overview",
+        "chunk_text": body,
+        "acl_principals": list(source_rows[0].get("acl_principals") or auth.principals),
+        "metadata": {},
+        "source_version": str(int(datetime.now(UTC).timestamp())),
+        "source_updated_at": now,
+    }
+    store.upsert_knowledge_document_chunk(auth, row)
+    return DocPageDetail(
+        source_id=source_id,
+        project_id=project_id,
+        title=title,
+        team=team,
+        source_type=payload.source_type,
+        source_system=current.source_system,
+        source_uri=current.source_uri,
+        body=body,
+        updated_at=now.isoformat(),
+    )
+
+
+def delete_doc_source(
+    store: KnowledgeStore,
+    auth: AuthContext,
+    project_id: str,
+    source_id: str,
+) -> None:
+    if not store.delete_knowledge_document_source(auth, project_id, source_id):
+        raise LookupError(source_id)

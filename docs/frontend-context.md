@@ -5,7 +5,9 @@
 The frontend is React 19 + TypeScript + Vite in `apps/web/`. `App.tsx` owns the workspace shell,
 conversation state, session URL state, theme, and debug preference. `AIWorkspace.tsx` owns the chat
 surface; `CalendarView.tsx` owns calendar, recording, summary, and transcript experiences;
-`calendarApi.ts` owns meeting/calendar HTTP calls; `auth.tsx` owns Google Sign-In and bearer headers.
+`calendarApi.ts` owns meeting/calendar HTTP calls; `DocsView.tsx` owns document browsing and CRUD;
+`auth.tsx` owns Google Sign-In and bearer headers. Lotus is the product name and Iris is the
+user-facing AI assistant name.
 
 ## UI rules
 
@@ -19,6 +21,8 @@ surface; `CalendarView.tsx` owns calendar, recording, summary, and transcript ex
 - MUST keep layouts functional at the existing desktop and mobile breakpoints.
 - MUST render numeric evidence markers only in Debug Mode; navigation actions remain visible.
 - MUST keep optimistic user messages visible while a stream is active and ignore stale hydration.
+- MUST keep document type labels inside an opened document rather than repeating them in the
+  sidebar/catalog lists. Document edits and deletes must use the authenticated `/v1/docs` APIs.
 
 ## Chat and session behavior
 

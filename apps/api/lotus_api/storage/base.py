@@ -113,6 +113,13 @@ class KnowledgeStore(Protocol):
         payload: dict,
     ) -> dict: ...
 
+    def delete_knowledge_document_source(
+        self,
+        auth: AuthContext,
+        project_id: str,
+        source_id: str,
+    ) -> bool: ...
+
     def create_chat_session(
         self, auth: AuthContext, project_id: str, session_id: str | None = None
     ) -> ChatSessionSummary: ...

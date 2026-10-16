@@ -100,7 +100,10 @@ limiter is per process and assumes one Cloud Run instance for the hackathon.
 ## API compatibility
 
 Preserve `POST /v1/chat/messages` fields and evidence shape. Calendar and meeting APIs are listed in
-`meeting-api-contract.md`. The UI must call APIs rather than import backend fixture files.
+`meeting-api-contract.md`. Document create, update, and delete operations write through the storage
+interface so pgvector rows stay synchronized; all are tenant/project/ACL scoped. The UI must call
+APIs rather than import backend fixture files. Lotus is the app name; Iris is the user-facing Result
+Agent identity.
 
 ## Logging and privacy
 

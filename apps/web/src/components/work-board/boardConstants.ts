@@ -1,11 +1,11 @@
 import type { BoardIssueStatus, BoardIssueType } from "./workBoardApi";
 
-export const BOARD_COLUMNS: { id: BoardIssueStatus; label: string; dotClass: string }[] = [
-  { id: "ready_to_start", label: "Ready to Start", dotClass: "board-column-dot-ready" },
-  { id: "development", label: "Development", dotClass: "board-column-dot-dev" },
-  { id: "review", label: "Review", dotClass: "board-column-dot-review" },
-  { id: "testing", label: "Testing", dotClass: "board-column-dot-testing" },
-  { id: "done", label: "Done", dotClass: "board-column-dot-done" }
+export const BOARD_COLUMNS: { id: BoardIssueStatus; label: string }[] = [
+  { id: "ready_to_start", label: "Ready to Start" },
+  { id: "development", label: "Development" },
+  { id: "review", label: "Review" },
+  { id: "testing", label: "Testing" },
+  { id: "done", label: "Done" }
 ];
 
 export const ISSUE_TYPE_LABEL: Record<BoardIssueType, string> = {

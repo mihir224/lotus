@@ -960,7 +960,7 @@ class OrchestrationService:
         )
         direct_result = len(plan.steps) == 1 and plan.steps[0].agent is AgentName.RESULT
         if direct_result:
-            answer = "Lotus is ready to help."
+            answer = "I’m Iris, the AI assistant in Lotus. How can I help?"
             uncertainty = []
         elif evidence:
             answer = " ".join(row.snippet for row in evidence[:3])
