@@ -1,0 +1,33 @@
+[
+  {
+    "repository_id": "checkout-service",
+    "name": "Checkout Service",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "acl_principals": ["group:demo", "user:demo-user"],
+    "files": {
+      "src/retry.py": "import random\n\ndef retry_delay(attempt: int, base_ms: int = 100) -> int:\n    \"\"\"Exponential backoff with full jitter.\"\"\"\n    ceiling = base_ms * (2 ** attempt)\n    return random.randint(0, ceiling)\n",
+      "src/checkout.py": "from .retry import retry_delay\n\ndef submit_payment(gateway, payload):\n    for attempt in range(3):\n        try:\n            return gateway.charge(payload)\n        except TimeoutError:\n            gateway.sleep(retry_delay(attempt))\n    raise RuntimeError('payment gateway unavailable')\n",
+      "README.md": "# Checkout Service\n\nHandles payment submission. Gateway retries use exponential backoff with full jitter.\n"
+    }
+  },
+  {
+    "repository_id": "retry-sdk",
+    "name": "Platform Retry SDK",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "acl_principals": ["group:demo"],
+    "files": {
+      "retry/backoff.ts": "export function fullJitter(attempt: number, baseMs = 100): number {\n  const ceiling = baseMs * 2 ** attempt;\n  return Math.floor(Math.random() * ceiling);\n}\n",
+      "README.md": "# Retry SDK\n\nShared retry helpers maintained by the platform team.\n"
+    }
+  },
+  {
+    "repository_id": "private-ledger",
+    "name": "Private Ledger",
+    "tenant_id": "another-tenant",
+    "project_id": "payments",
+    "acl_principals": ["group:finance-private"],
+    "files": {"ledger.py": "SECRET_CONFIGURATION = 'never-return-this'\n"}
+  }
+]

@@ -1,0 +1,1890 @@
+[
+  {
+    "chunk_id": "doc-001",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-PAY-01",
+    "source_uri": "fixture://confluence/ARCH-PAY-01",
+    "title": "Checkout resilience architecture",
+    "section_path": "Retry flow",
+    "chunk_text": "The checkout client sends retryable provider failures through capped exponential backoff with full jitter before the payment gateway. Three total attempts are allowed.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-10-01T08:00:00Z",
+    "metadata": {
+      "owner": "Payments"
+    }
+  },
+  {
+    "chunk_id": "doc-002",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-PAY-01",
+    "source_uri": "fixture://confluence/RUNBOOK-PAY-01",
+    "title": "Payment provider incident runbook",
+    "section_path": "Retry exhaustion",
+    "chunk_text": "When retry exhaustion spikes, on-call verifies provider health and transient failure rates. Retry limits may only be changed through the approved feature flag procedure.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "8",
+    "source_updated_at": "2026-10-03T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-003",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-PAY-01",
+    "source_uri": "fixture://confluence/PROD-PAY-01",
+    "title": "Checkout retry product behavior",
+    "section_path": "Customer experience",
+    "chunk_text": "Customers should see at most three payment attempts. The bounded policy reduces duplicate charge risk and prevents long checkout waits.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-09-29T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-004",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "github",
+    "source_type": "architecture",
+    "source_id": "GH-RETRY-LIB",
+    "source_uri": "fixture://github/platform/retry-library",
+    "title": "Shared retry library proposal",
+    "section_path": "Design",
+    "chunk_text": "The Platform team is building a shared retry library with exponential backoff, jitter, metrics, and policy-based maximum attempts for service clients.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-07T08:00:00Z",
+    "metadata": {
+      "repository": "platform/retry-library"
+    }
+  },
+  {
+    "chunk_id": "doc-005",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PAY-123",
+    "source_uri": "fixture://jira/PAY-123",
+    "title": "Add jitter to checkout retries",
+    "section_path": "Current fields",
+    "chunk_text": "PAY-123 is In Progress and assigned to Demo Engineer. Add full jitter and unit tests to the checkout retry client.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "17",
+    "source_updated_at": "2026-10-12T14:20:00Z",
+    "metadata": {
+      "status": "In Progress"
+    }
+  },
+  {
+    "chunk_id": "doc-006",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "SRE",
+    "source_system": "sharepoint",
+    "source_type": "runbook",
+    "source_id": "SP-OBS-09",
+    "source_uri": "fixture://sharepoint/SP-OBS-09",
+    "title": "Retry observability standard",
+    "section_path": "Required metrics",
+    "chunk_text": "All retry loops emit attempt count, terminal outcome, provider, and jitter delay metrics. Alerts distinguish retry exhaustion from permanent declines.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "1",
+    "source_updated_at": "2026-09-22T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-007",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Security",
+    "source_system": "confluence",
+    "source_type": "policy",
+    "source_id": "SEC-PAY-04",
+    "source_uri": "fixture://confluence/SEC-PAY-04",
+    "title": "Payment data handling policy",
+    "section_path": "Logging",
+    "chunk_text": "Logs and agent prompts must not contain card numbers, tokens, credentials, or full payment payloads. Operational evidence is redacted before storage.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "6",
+    "source_updated_at": "2026-08-15T08:00:00Z",
+    "metadata": {
+      "owner": "Security"
+    }
+  },
+  {
+    "chunk_id": "doc-008",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Mobile",
+    "source_system": "github",
+    "source_type": "architecture",
+    "source_id": "GH-MOBILE-QUEUE",
+    "source_uri": "fixture://github/mobile/offline-queue",
+    "title": "Mobile offline payment queue",
+    "section_path": "Retry policy",
+    "chunk_text": "The Mobile team retries network submission with jitter but never retries a payment after an ambiguous provider acknowledgement.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "5",
+    "source_updated_at": "2026-10-05T08:00:00Z",
+    "metadata": {
+      "owner": "Mobile"
+    }
+  },
+  {
+    "chunk_id": "doc-009",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "adr",
+    "source_id": "ADR-017",
+    "source_uri": "fixture://confluence/ADR-017",
+    "title": "Capped exponential backoff",
+    "section_path": "Decision",
+    "chunk_text": "Adopt full jitter and cap checkout at three total attempts. The governing decision supersedes fixed-delay retry behavior.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "12",
+    "source_updated_at": "2026-09-18T10:15:00Z",
+    "metadata": {
+      "status": "accepted"
+    }
+  },
+  {
+    "chunk_id": "doc-010",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Analytics",
+    "source_system": "sharepoint",
+    "source_type": "product",
+    "source_id": "AN-FAIL-02",
+    "source_uri": "fixture://sharepoint/AN-FAIL-02",
+    "title": "Checkout failure analysis",
+    "section_path": "Findings",
+    "chunk_text": "Transient provider errors account for most recoverable checkout failures. A third attempt recovers little additional traffic compared with its latency cost.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-09-25T08:00:00Z",
+    "metadata": {
+      "owner": "Analytics"
+    }
+  },
+  {
+    "chunk_id": "doc-011",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PLAT-88",
+    "source_uri": "fixture://jira/PLAT-88",
+    "title": "Standardize retry policies",
+    "section_path": "Description",
+    "chunk_text": "Platform is evaluating a company-wide retry SDK so Payments, Orders, and Notifications do not implement different jitter algorithms.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "7",
+    "source_updated_at": "2026-10-08T12:00:00Z",
+    "metadata": {
+      "status": "Discovery"
+    }
+  },
+  {
+    "chunk_id": "doc-012",
+    "tenant_id": "other",
+    "project_id": "payments",
+    "team": "Private",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "PRIVATE-01",
+    "source_uri": "fixture://confluence/PRIVATE-01",
+    "title": "Protected retry design",
+    "section_path": "Secret",
+    "chunk_text": "This cross-tenant document must never be returned to the demo tenant.",
+    "acl_principals": [
+      "group:other"
+    ],
+    "source_version": "1",
+    "source_updated_at": "2026-10-01T08:00:00Z",
+    "metadata": {}
+  },
+  {
+    "chunk_id": "doc-013",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-EVENT-02",
+    "source_uri": "fixture://confluence/ARCH-EVENT-02",
+    "title": "Payment event delivery architecture",
+    "section_path": "Delivery guarantees",
+    "chunk_text": "Payment events use an outbox and idempotent consumers. Delivery is at least once, so every consumer stores the event identifier before applying side effects.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-09T08:00:00Z",
+    "metadata": {
+      "owner": "Platform"
+    }
+  },
+  {
+    "chunk_id": "doc-014",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "SRE",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-QUEUE-02",
+    "source_uri": "fixture://confluence/RUNBOOK-QUEUE-02",
+    "title": "Payment queue backlog runbook",
+    "section_path": "Mitigation",
+    "chunk_text": "If payment event lag exceeds ten minutes, pause nonessential consumers, confirm database headroom, and scale the settlement consumer before replaying dead letters.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "5",
+    "source_updated_at": "2026-10-11T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-015",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-REFUND-03",
+    "source_uri": "fixture://confluence/PROD-REFUND-03",
+    "title": "Refund experience requirements",
+    "section_path": "Customer communication",
+    "chunk_text": "Refund status must be visible within one minute and include the expected settlement window. Support should see the same canonical status as the customer.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-10-02T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-016",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Security",
+    "source_system": "confluence",
+    "source_type": "policy",
+    "source_id": "SEC-TOKEN-05",
+    "source_uri": "fixture://confluence/SEC-TOKEN-05",
+    "title": "Payment token lifecycle policy",
+    "section_path": "Rotation",
+    "chunk_text": "Payment tokens are scoped to merchant and environment. Rotation must overlap for twenty-four hours and audit logs may contain only token fingerprints.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-09-27T08:00:00Z",
+    "metadata": {
+      "owner": "Security"
+    }
+  },
+  {
+    "chunk_id": "doc-017",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Mobile",
+    "source_system": "confluence",
+    "source_type": "guide",
+    "source_id": "MOB-CHECKOUT-06",
+    "source_uri": "fixture://confluence/MOB-CHECKOUT-06",
+    "title": "Mobile checkout integration guide",
+    "section_path": "Idempotency",
+    "chunk_text": "Mobile clients create an idempotency key before submission and retain it until a terminal checkout state is observed.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "6",
+    "source_updated_at": "2026-10-06T08:00:00Z",
+    "metadata": {
+      "owner": "Mobile"
+    }
+  },
+  {
+    "chunk_id": "doc-018",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Support",
+    "source_system": "sharepoint",
+    "source_type": "runbook",
+    "source_id": "SUP-DUP-01",
+    "source_uri": "fixture://sharepoint/SUP-DUP-01",
+    "title": "Duplicate charge support playbook",
+    "section_path": "Triage",
+    "chunk_text": "Support checks provider references and the idempotency ledger before escalating a suspected duplicate charge to Payments on-call.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-04T08:00:00Z",
+    "metadata": {
+      "owner": "Support"
+    }
+  },
+  {
+    "chunk_id": "doc-019",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "adr",
+    "source_id": "ADR-021",
+    "source_uri": "fixture://confluence/ADR-021",
+    "title": "Payment idempotency ledger",
+    "section_path": "Decision",
+    "chunk_text": "Store idempotency keys and terminal outcomes for seven days in the regional ledger. Duplicate requests return the original outcome.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "7",
+    "source_updated_at": "2026-09-30T08:00:00Z",
+    "metadata": {
+      "status": "accepted"
+    }
+  },
+  {
+    "chunk_id": "doc-020",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Analytics",
+    "source_system": "sharepoint",
+    "source_type": "product",
+    "source_id": "AN-LATENCY-04",
+    "source_uri": "fixture://sharepoint/AN-LATENCY-04",
+    "title": "Checkout latency budget",
+    "section_path": "Targets",
+    "chunk_text": "The p95 checkout authorization target is 2.5 seconds. Retry delay and provider latency are reported separately by region.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-10T08:00:00Z",
+    "metadata": {
+      "owner": "Analytics"
+    }
+  },
+  {
+    "chunk_id": "doc-021",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PLAT-102",
+    "source_uri": "fixture://jira/PLAT-102",
+    "title": "Introduce event schema registry",
+    "section_path": "Description",
+    "chunk_text": "Platform is adding compatibility checks for payment and order event schemas before producers can deploy.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "5",
+    "source_updated_at": "2026-10-13T08:00:00Z",
+    "metadata": {
+      "status": "In Progress"
+    }
+  },
+  {
+    "chunk_id": "doc-022",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-SETTLE-03",
+    "source_uri": "fixture://confluence/RUNBOOK-SETTLE-03",
+    "title": "Settlement mismatch runbook",
+    "section_path": "Investigation",
+    "chunk_text": "Compare the internal ledger, provider settlement file, and reconciliation checkpoint. Never replay settlements until the mismatch class is confirmed.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "9",
+    "source_updated_at": "2026-10-12T08:00:00Z",
+    "metadata": {
+      "owner": "Payments"
+    }
+  },
+  {
+    "chunk_id": "doc-023",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Security",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "SEC-THREAT-07",
+    "source_uri": "fixture://confluence/SEC-THREAT-07",
+    "title": "Checkout threat model",
+    "section_path": "Replay attacks",
+    "chunk_text": "Replay protection combines idempotency keys, signed provider callbacks, nonce validation, and a bounded acceptance window.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-09-20T08:00:00Z",
+    "metadata": {
+      "owner": "Security"
+    }
+  },
+  {
+    "chunk_id": "doc-024",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-FAILOVER-02",
+    "source_uri": "fixture://confluence/PROD-FAILOVER-02",
+    "title": "Provider failover experience",
+    "section_path": "Guardrails",
+    "chunk_text": "Automatic provider failover is allowed only before an ambiguous acknowledgement. The UI must not expose provider names to customers.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-05T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-025",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "SRE",
+    "source_system": "sharepoint",
+    "source_type": "runbook",
+    "source_id": "SRE-CAPACITY-08",
+    "source_uri": "fixture://sharepoint/SRE-CAPACITY-08",
+    "title": "Payments capacity checklist",
+    "section_path": "Peak readiness",
+    "chunk_text": "Before peak traffic, validate database connection budgets, queue drain rates, provider quotas, and regional failover dashboards.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "6",
+    "source_updated_at": "2026-10-14T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-026",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Mobile",
+    "source_system": "github",
+    "source_type": "release_note",
+    "source_id": "MOB-REL-42",
+    "source_uri": "fixture://github/mobile/releases/42",
+    "title": "Mobile payments SDK 4.2",
+    "section_path": "Changes",
+    "chunk_text": "Version 4.2 adds durable idempotency keys, structured retry metrics, and cancellation-safe checkout resumption.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "1",
+    "source_updated_at": "2026-10-15T08:00:00Z",
+    "metadata": {
+      "owner": "Mobile"
+    }
+  },
+  {
+    "chunk_id": "doc-027",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Support",
+    "source_system": "confluence",
+    "source_type": "guide",
+    "source_id": "SUP-ESC-02",
+    "source_uri": "fixture://confluence/SUP-ESC-02",
+    "title": "Payments escalation guide",
+    "section_path": "Contacts",
+    "chunk_text": "Escalate active authorization incidents to Payments on-call and settlement discrepancies to Finance Operations with the provider reference attached.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-07T08:00:00Z",
+    "metadata": {
+      "owner": "Support"
+    }
+  },
+  {
+    "chunk_id": "doc-028",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-OBS-11",
+    "source_uri": "fixture://confluence/ARCH-OBS-11",
+    "title": "Payments telemetry architecture",
+    "section_path": "Trace propagation",
+    "chunk_text": "Checkout trace context propagates through gateway, provider adapter, outbox, and settlement consumers without recording payment payloads.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-08T08:00:00Z",
+    "metadata": {
+      "owner": "Platform"
+    }
+  },
+  {
+    "chunk_id": "doc-029",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PAY-184",
+    "source_uri": "fixture://jira/PAY-184",
+    "title": "Reconcile delayed provider callbacks",
+    "section_path": "Acceptance criteria",
+    "chunk_text": "Delayed callbacks are matched to the authorization ledger and cannot overwrite a newer terminal payment state.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "8",
+    "source_updated_at": "2026-10-15T09:00:00Z",
+    "metadata": {
+      "status": "Review"
+    }
+  },
+  {
+    "chunk_id": "doc-030",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-ACCESS-01",
+    "source_uri": "fixture://confluence/PROD-ACCESS-01",
+    "title": "Accessible checkout messaging",
+    "section_path": "Error states",
+    "chunk_text": "Checkout errors use concise text, announce updates to assistive technology, and preserve user input whenever retry is safe.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-13T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-001-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-PAY-01",
+    "source_uri": "fixture://confluence/ARCH-PAY-01",
+    "title": "Checkout resilience architecture",
+    "section_path": "Gateway integration",
+    "chunk_text": "The checkout service calls the payment gateway over mutual TLS with a 2.5s connect timeout and 4s read timeout. Non-idempotent provider operations always include the checkout idempotency key in the adapter layer before the HTTP client executes.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-10-01T08:00:00Z",
+    "metadata": {
+      "owner": "Payments"
+    }
+  },
+  {
+    "chunk_id": "doc-001-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-PAY-01",
+    "source_uri": "fixture://confluence/ARCH-PAY-01",
+    "title": "Checkout resilience architecture",
+    "section_path": "Failure classification",
+    "chunk_text": "Retryable failures include HTTP 429, 502/503/504, and provider error codes mapped to TRANSIENT in the adapter catalog. Hard declines, fraud blocks, and validation errors terminate immediately and surface a customer-safe message without further attempts.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-10-01T08:00:00Z",
+    "metadata": {
+      "owner": "Payments"
+    }
+  },
+  {
+    "chunk_id": "doc-001-s3",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-PAY-01",
+    "source_uri": "fixture://confluence/ARCH-PAY-01",
+    "title": "Checkout resilience architecture",
+    "section_path": "Monitoring",
+    "chunk_text": "Dashboards track attempt index, backoff delay, terminal reason, and provider region. SRE pages when retry exhaustion exceeds 2% of authorizations for fifteen minutes in any region.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-10-01T08:00:00Z",
+    "metadata": {
+      "owner": "Payments"
+    }
+  },
+  {
+    "chunk_id": "doc-002-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-PAY-01",
+    "source_uri": "fixture://confluence/RUNBOOK-PAY-01",
+    "title": "Payment provider incident runbook",
+    "section_path": "Initial triage",
+    "chunk_text": "Confirm whether exhaustion correlates with a single provider region or all routes. Pull the last thirty minutes of gateway error codes and compare to the provider status page.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "8",
+    "source_updated_at": "2026-10-03T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-002-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-PAY-01",
+    "source_uri": "fixture://confluence/RUNBOOK-PAY-01",
+    "title": "Payment provider incident runbook",
+    "section_path": "Mitigation steps",
+    "chunk_text": "If provider latency is elevated, enable the checkout degraded-mode flag to cap concurrent authorizations per pod. Do not raise max attempts without Product and Security approval.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "8",
+    "source_updated_at": "2026-10-03T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-002-s3",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-PAY-01",
+    "source_uri": "fixture://confluence/RUNBOOK-PAY-01",
+    "title": "Payment provider incident runbook",
+    "section_path": "Communication",
+    "chunk_text": "Post in #payments-incidents with impact estimate, customer-facing symptoms, and ETA for next update. Finance Operations receives a parallel thread when settlement lag is affected.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "8",
+    "source_updated_at": "2026-10-03T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-003-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-PAY-01",
+    "source_uri": "fixture://confluence/PROD-PAY-01",
+    "title": "Checkout retry product behavior",
+    "section_path": "Copy and messaging",
+    "chunk_text": "Retry prompts explain that the payment did not complete and offer a single primary action. Avoid language that implies duplicate charges when the ledger shows no capture.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-09-29T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-003-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-PAY-01",
+    "source_uri": "fixture://confluence/PROD-PAY-01",
+    "title": "Checkout retry product behavior",
+    "section_path": "Accessibility",
+    "chunk_text": "Screen readers announce retry state changes within 500ms. Focus remains on the payment panel unless the customer explicitly navigates away.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-09-29T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-004-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "github",
+    "source_type": "architecture",
+    "source_id": "GH-RETRY-LIB",
+    "source_uri": "fixture://github/platform/retry-library",
+    "title": "Shared retry library proposal",
+    "section_path": "API surface",
+    "chunk_text": "Policies declare max attempts, base delay, max delay, jitter strategy, and retry predicates. Callers supply a context label used consistently in metrics and structured logs.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-07T08:00:00Z",
+    "metadata": {
+      "repository": "platform/retry-library"
+    }
+  },
+  {
+    "chunk_id": "doc-004-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "github",
+    "source_type": "architecture",
+    "source_id": "GH-RETRY-LIB",
+    "source_uri": "fixture://github/platform/retry-library",
+    "title": "Shared retry library proposal",
+    "section_path": "Rollout plan",
+    "chunk_text": "Payments adopts the library in checkout-client v3.8, then Orders notification dispatch. Breaking policy changes require a migration note in the platform changelog.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-07T08:00:00Z",
+    "metadata": {
+      "repository": "platform/retry-library"
+    }
+  },
+  {
+    "chunk_id": "doc-005-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PAY-123",
+    "source_uri": "fixture://jira/PAY-123",
+    "title": "Add jitter to checkout retries",
+    "section_path": "Acceptance criteria",
+    "chunk_text": "Unit tests cover full jitter distribution bounds and ensure the third attempt never schedules after the checkout session TTL. Integration tests run against the sandbox provider nightly.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "17",
+    "source_updated_at": "2026-10-12T14:20:00Z",
+    "metadata": {
+      "status": "In Progress"
+    }
+  },
+  {
+    "chunk_id": "doc-005-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PAY-123",
+    "source_uri": "fixture://jira/PAY-123",
+    "title": "Add jitter to checkout retries",
+    "section_path": "Dependencies",
+    "chunk_text": "Blocked on adapter release 2.14 for jitter-safe idempotency headers. Target merge before the October peak readiness checkpoint.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "17",
+    "source_updated_at": "2026-10-12T14:20:00Z",
+    "metadata": {
+      "status": "In Progress"
+    }
+  },
+  {
+    "chunk_id": "doc-006-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "SRE",
+    "source_system": "sharepoint",
+    "source_type": "runbook",
+    "source_id": "SP-OBS-09",
+    "source_uri": "fixture://sharepoint/SP-OBS-09",
+    "title": "Retry observability standard",
+    "section_path": "Dashboards",
+    "chunk_text": "Each service exposes retry_attempt_total and retry_terminal_outcome counters labeled by policy name, provider, and region. Golden signals dashboards link from the service catalog.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "1",
+    "source_updated_at": "2026-09-22T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-006-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "SRE",
+    "source_system": "sharepoint",
+    "source_type": "runbook",
+    "source_id": "SP-OBS-09",
+    "source_uri": "fixture://sharepoint/SP-OBS-09",
+    "title": "Retry observability standard",
+    "section_path": "Alert routing",
+    "chunk_text": "Retry exhaustion alerts route to the owning team during business hours and to Payments on-call otherwise. Pages include a deep link to the standard provider incident runbook.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "1",
+    "source_updated_at": "2026-09-22T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-007-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Security",
+    "source_system": "confluence",
+    "source_type": "policy",
+    "source_id": "SEC-PAY-04",
+    "source_uri": "fixture://confluence/SEC-PAY-04",
+    "title": "Payment data handling policy",
+    "section_path": "Scope",
+    "chunk_text": "Applies to application logs, support exports, agent retrieval snippets, and incident timelines. PCI-sensitive fields must never enter Lotus indexing pipelines.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "6",
+    "source_updated_at": "2026-08-15T08:00:00Z",
+    "metadata": {
+      "owner": "Security"
+    }
+  },
+  {
+    "chunk_id": "doc-007-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Security",
+    "source_system": "confluence",
+    "source_type": "policy",
+    "source_id": "SEC-PAY-04",
+    "source_uri": "fixture://confluence/SEC-PAY-04",
+    "title": "Payment data handling policy",
+    "section_path": "Redaction",
+    "chunk_text": "Structured log processors replace PAN-like sequences and JWT bodies with stable fingerprints. Quarterly audits sample 1% of stored operational events for compliance.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "6",
+    "source_updated_at": "2026-08-15T08:00:00Z",
+    "metadata": {
+      "owner": "Security"
+    }
+  },
+  {
+    "chunk_id": "doc-008-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Mobile",
+    "source_system": "github",
+    "source_type": "architecture",
+    "source_id": "GH-MOBILE-QUEUE",
+    "source_uri": "fixture://github/mobile/offline-queue",
+    "title": "Mobile offline payment queue",
+    "section_path": "Offline queue",
+    "chunk_text": "Queued submissions persist in encrypted local storage with the idempotency key and session version. The queue drains when connectivity returns and the checkout session is still valid.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "5",
+    "source_updated_at": "2026-10-05T08:00:00Z",
+    "metadata": {
+      "owner": "Mobile"
+    }
+  },
+  {
+    "chunk_id": "doc-008-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Mobile",
+    "source_system": "github",
+    "source_type": "architecture",
+    "source_id": "GH-MOBILE-QUEUE",
+    "source_uri": "fixture://github/mobile/offline-queue",
+    "title": "Mobile offline payment queue",
+    "section_path": "Ambiguous responses",
+    "chunk_text": "If the client receives HTTP 504 after a possible authorization, the UI enters a reconciliation state and polls the status endpoint rather than submitting a new payment.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "5",
+    "source_updated_at": "2026-10-05T08:00:00Z",
+    "metadata": {
+      "owner": "Mobile"
+    }
+  },
+  {
+    "chunk_id": "doc-009-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "adr",
+    "source_id": "ADR-017",
+    "source_uri": "fixture://confluence/ADR-017",
+    "title": "Capped exponential backoff",
+    "section_path": "Context",
+    "chunk_text": "Fixed-delay retries amplified provider thundering herds during regional outages. Product required a predictable upper bound on customer wait time at checkout.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "12",
+    "source_updated_at": "2026-09-18T10:15:00Z",
+    "metadata": {
+      "status": "accepted"
+    }
+  },
+  {
+    "chunk_id": "doc-009-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "adr",
+    "source_id": "ADR-017",
+    "source_uri": "fixture://confluence/ADR-017",
+    "title": "Capped exponential backoff",
+    "section_path": "Consequences",
+    "chunk_text": "Engineering implements shared backoff utilities. Analytics revises success-rate models to exclude irrecoverable third-attempt latency from conversion KPIs.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "12",
+    "source_updated_at": "2026-09-18T10:15:00Z",
+    "metadata": {
+      "status": "accepted"
+    }
+  },
+  {
+    "chunk_id": "doc-010-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Analytics",
+    "source_system": "sharepoint",
+    "source_type": "product",
+    "source_id": "AN-FAIL-02",
+    "source_uri": "fixture://sharepoint/AN-FAIL-02",
+    "title": "Checkout failure analysis",
+    "section_path": "Methodology",
+    "chunk_text": "Analysis covers six weeks of authorization attempts in US and EU regions with provider outage windows excluded. Cohorts split by payment method and merchant tier.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-09-25T08:00:00Z",
+    "metadata": {
+      "owner": "Analytics"
+    }
+  },
+  {
+    "chunk_id": "doc-010-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Analytics",
+    "source_system": "sharepoint",
+    "source_type": "product",
+    "source_id": "AN-FAIL-02",
+    "source_uri": "fixture://sharepoint/AN-FAIL-02",
+    "title": "Checkout failure analysis",
+    "section_path": "Recommendations",
+    "chunk_text": "Product approved capping attempts at three. Engineering prioritizes faster terminal messaging when the second attempt fails with a transient code.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-09-25T08:00:00Z",
+    "metadata": {
+      "owner": "Analytics"
+    }
+  },
+  {
+    "chunk_id": "doc-011-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PLAT-88",
+    "source_uri": "fixture://jira/PLAT-88",
+    "title": "Standardize retry policies",
+    "section_path": "Discovery notes",
+    "chunk_text": "Interviews with Payments, Orders, and Notifications found four distinct backoff implementations. Two teams already depend on incompatible metric label names.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "7",
+    "source_updated_at": "2026-10-08T12:00:00Z",
+    "metadata": {
+      "status": "Discovery"
+    }
+  },
+  {
+    "chunk_id": "doc-011-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PLAT-88",
+    "source_uri": "fixture://jira/PLAT-88",
+    "title": "Standardize retry policies",
+    "section_path": "Next steps",
+    "chunk_text": "Publish an RFC for policy schema v1 and schedule office hours during Q4 platform week.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "7",
+    "source_updated_at": "2026-10-08T12:00:00Z",
+    "metadata": {
+      "status": "Discovery"
+    }
+  },
+  {
+    "chunk_id": "doc-013-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-EVENT-02",
+    "source_uri": "fixture://confluence/ARCH-EVENT-02",
+    "title": "Payment event delivery architecture",
+    "section_path": "Outbox pattern",
+    "chunk_text": "The payments service writes domain events to an outbox table in the same transaction as ledger updates. A relay publishes to the event bus with ordering preserved per payment ID.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-09T08:00:00Z",
+    "metadata": {
+      "owner": "Platform"
+    }
+  },
+  {
+    "chunk_id": "doc-013-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-EVENT-02",
+    "source_uri": "fixture://confluence/ARCH-EVENT-02",
+    "title": "Payment event delivery architecture",
+    "section_path": "Consumer guidelines",
+    "chunk_text": "Consumers must deduplicate on event_id and respect at-least-once delivery. Side effects that cannot be rolled back require an idempotent application layer.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-09T08:00:00Z",
+    "metadata": {
+      "owner": "Platform"
+    }
+  },
+  {
+    "chunk_id": "doc-014-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "SRE",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-QUEUE-02",
+    "source_uri": "fixture://confluence/RUNBOOK-QUEUE-02",
+    "title": "Payment queue backlog runbook",
+    "section_path": "Detection",
+    "chunk_text": "Lag alarms fire when oldest unprocessed payment event exceeds ten minutes or backlog depth doubles within five minutes. Check consumer autoscaler and database CPU concurrently.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "5",
+    "source_updated_at": "2026-10-11T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-014-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "SRE",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-QUEUE-02",
+    "source_uri": "fixture://confluence/RUNBOOK-QUEUE-02",
+    "title": "Payment queue backlog runbook",
+    "section_path": "Recovery",
+    "chunk_text": "Scale settlement consumers first, then replay dead-letter queues in batches of 500 with rate limits to protect downstream databases.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "5",
+    "source_updated_at": "2026-10-11T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-015-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-REFUND-03",
+    "source_uri": "fixture://confluence/PROD-REFUND-03",
+    "title": "Refund experience requirements",
+    "section_path": "Status model",
+    "chunk_text": "Refunds progress through Requested, Processing, Settled, and Failed with immutable timestamps displayed in the customer account and agent console.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-10-02T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-015-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-REFUND-03",
+    "source_uri": "fixture://confluence/PROD-REFUND-03",
+    "title": "Refund experience requirements",
+    "section_path": "Support alignment",
+    "chunk_text": "Macros in the support CRM pull the same status API as the storefront to prevent contradictory answers during provider delays.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-10-02T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-016-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Security",
+    "source_system": "confluence",
+    "source_type": "policy",
+    "source_id": "SEC-TOKEN-05",
+    "source_uri": "fixture://confluence/SEC-TOKEN-05",
+    "title": "Payment token lifecycle policy",
+    "section_path": "Storage",
+    "chunk_text": "Tokens live in the vault service with environment-scoped namespaces. Applications receive reference handles rather than raw token material.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-09-27T08:00:00Z",
+    "metadata": {
+      "owner": "Security"
+    }
+  },
+  {
+    "chunk_id": "doc-016-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Security",
+    "source_system": "confluence",
+    "source_type": "policy",
+    "source_id": "SEC-TOKEN-05",
+    "source_uri": "fixture://confluence/SEC-TOKEN-05",
+    "title": "Payment token lifecycle policy",
+    "section_path": "Incident response",
+    "chunk_text": "Suspected token leakage triggers rotation within one hour and forces re-authentication of affected merchant integrations.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-09-27T08:00:00Z",
+    "metadata": {
+      "owner": "Security"
+    }
+  },
+  {
+    "chunk_id": "doc-017-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Mobile",
+    "source_system": "confluence",
+    "source_type": "guide",
+    "source_id": "MOB-CHECKOUT-06",
+    "source_uri": "fixture://confluence/MOB-CHECKOUT-06",
+    "title": "Mobile checkout integration guide",
+    "section_path": "Session lifecycle",
+    "chunk_text": "Clients generate a UUID v4 idempotency key at pay-button tap and reuse it across retries until the session reaches Authorized, Declined, or Expired.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "6",
+    "source_updated_at": "2026-10-06T08:00:00Z",
+    "metadata": {
+      "owner": "Mobile"
+    }
+  },
+  {
+    "chunk_id": "doc-017-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Mobile",
+    "source_system": "confluence",
+    "source_type": "guide",
+    "source_id": "MOB-CHECKOUT-06",
+    "source_uri": "fixture://confluence/MOB-CHECKOUT-06",
+    "title": "Mobile checkout integration guide",
+    "section_path": "Testing checklist",
+    "chunk_text": "QA validates airplane-mode retries, process death mid-request, and clock skew up to thirty seconds.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "6",
+    "source_updated_at": "2026-10-06T08:00:00Z",
+    "metadata": {
+      "owner": "Mobile"
+    }
+  },
+  {
+    "chunk_id": "doc-018-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Support",
+    "source_system": "sharepoint",
+    "source_type": "runbook",
+    "source_id": "SUP-DUP-01",
+    "source_uri": "fixture://sharepoint/SUP-DUP-01",
+    "title": "Duplicate charge support playbook",
+    "section_path": "Verification steps",
+    "chunk_text": "Look up the authorization ID in the admin console and compare capture count to provider records. If counts match and timestamps differ by less than two seconds, educate the customer on pending states.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-04T08:00:00Z",
+    "metadata": {
+      "owner": "Support"
+    }
+  },
+  {
+    "chunk_id": "doc-018-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Support",
+    "source_system": "sharepoint",
+    "source_type": "runbook",
+    "source_id": "SUP-DUP-01",
+    "source_uri": "fixture://sharepoint/SUP-DUP-01",
+    "title": "Duplicate charge support playbook",
+    "section_path": "Escalation",
+    "chunk_text": "Escalate to Payments on-call when the ledger shows two captures for one idempotency key or provider references diverge.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-04T08:00:00Z",
+    "metadata": {
+      "owner": "Support"
+    }
+  },
+  {
+    "chunk_id": "doc-019-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "adr",
+    "source_id": "ADR-021",
+    "source_uri": "fixture://confluence/ADR-021",
+    "title": "Payment idempotency ledger",
+    "section_path": "Context",
+    "chunk_text": "Duplicate submissions during mobile network flaps created reconciliation work for Finance. A durable ledger was required without blocking checkout latency.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "7",
+    "source_updated_at": "2026-09-30T08:00:00Z",
+    "metadata": {
+      "status": "accepted"
+    }
+  },
+  {
+    "chunk_id": "doc-019-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "adr",
+    "source_id": "ADR-021",
+    "source_uri": "fixture://confluence/ADR-021",
+    "title": "Payment idempotency ledger",
+    "section_path": "Implementation",
+    "chunk_text": "The ledger stores key hash, merchant ID, amount, currency, terminal state, and response fingerprint. TTL is seven days with cold storage export for audits.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "7",
+    "source_updated_at": "2026-09-30T08:00:00Z",
+    "metadata": {
+      "status": "accepted"
+    }
+  },
+  {
+    "chunk_id": "doc-020-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Analytics",
+    "source_system": "sharepoint",
+    "source_type": "product",
+    "source_id": "AN-LATENCY-04",
+    "source_uri": "fixture://sharepoint/AN-LATENCY-04",
+    "title": "Checkout latency budget",
+    "section_path": "Budget breakdown",
+    "chunk_text": "Gateway budget 800ms, provider round trip 1200ms, internal enrichment 500ms. Retry delay is excluded from authorization SLO but included in end-to-end checkout funnel metrics.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-10T08:00:00Z",
+    "metadata": {
+      "owner": "Analytics"
+    }
+  },
+  {
+    "chunk_id": "doc-020-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Analytics",
+    "source_system": "sharepoint",
+    "source_type": "product",
+    "source_id": "AN-LATENCY-04",
+    "source_uri": "fixture://sharepoint/AN-LATENCY-04",
+    "title": "Checkout latency budget",
+    "section_path": "Reporting",
+    "chunk_text": "Weekly reviews compare p50/p95 by region and flag regressions greater than 10% week over week.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-10T08:00:00Z",
+    "metadata": {
+      "owner": "Analytics"
+    }
+  },
+  {
+    "chunk_id": "doc-021-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PLAT-102",
+    "source_uri": "fixture://jira/PLAT-102",
+    "title": "Introduce event schema registry",
+    "section_path": "Compatibility rules",
+    "chunk_text": "Producers register schemas before deploy. Breaking changes require a major version bump and consumer approval from Payments and Orders.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "5",
+    "source_updated_at": "2026-10-13T08:00:00Z",
+    "metadata": {
+      "status": "In Progress"
+    }
+  },
+  {
+    "chunk_id": "doc-021-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PLAT-102",
+    "source_uri": "fixture://jira/PLAT-102",
+    "title": "Introduce event schema registry",
+    "section_path": "Timeline",
+    "chunk_text": "Registry MVP targets November deploy with payment.captured v3 as the pilot schema.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "5",
+    "source_updated_at": "2026-10-13T08:00:00Z",
+    "metadata": {
+      "status": "In Progress"
+    }
+  },
+  {
+    "chunk_id": "doc-022-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-SETTLE-03",
+    "source_uri": "fixture://confluence/RUNBOOK-SETTLE-03",
+    "title": "Settlement mismatch runbook",
+    "section_path": "Data sources",
+    "chunk_text": "Pull the daily settlement file from the provider SFTP bucket, internal ledger export, and reconciliation checkpoint table for the same business date.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "9",
+    "source_updated_at": "2026-10-12T08:00:00Z",
+    "metadata": {
+      "owner": "Payments"
+    }
+  },
+  {
+    "chunk_id": "doc-022-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "confluence",
+    "source_type": "runbook",
+    "source_id": "RUNBOOK-SETTLE-03",
+    "source_uri": "fixture://confluence/RUNBOOK-SETTLE-03",
+    "title": "Settlement mismatch runbook",
+    "section_path": "Replay policy",
+    "chunk_text": "Manual replays require Finance sign-off and must include the mismatch ticket ID in audit logs.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "9",
+    "source_updated_at": "2026-10-12T08:00:00Z",
+    "metadata": {
+      "owner": "Payments"
+    }
+  },
+  {
+    "chunk_id": "doc-023-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Security",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "SEC-THREAT-07",
+    "source_uri": "fixture://confluence/SEC-THREAT-07",
+    "title": "Checkout threat model",
+    "section_path": "Threat actors",
+    "chunk_text": "External attackers replay captured callbacks; insider misuse is out of scope for this revision.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-09-20T08:00:00Z",
+    "metadata": {
+      "owner": "Security"
+    }
+  },
+  {
+    "chunk_id": "doc-023-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Security",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "SEC-THREAT-07",
+    "source_uri": "fixture://confluence/SEC-THREAT-07",
+    "title": "Checkout threat model",
+    "section_path": "Controls",
+    "chunk_text": "Callbacks validate HMAC signatures, nonce uniqueness, and timestamp skew under five minutes. Failed validation increments a metric watched by Security operations.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "4",
+    "source_updated_at": "2026-09-20T08:00:00Z",
+    "metadata": {
+      "owner": "Security"
+    }
+  },
+  {
+    "chunk_id": "doc-024-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-FAILOVER-02",
+    "source_uri": "fixture://confluence/PROD-FAILOVER-02",
+    "title": "Provider failover experience",
+    "section_path": "Customer experience",
+    "chunk_text": "Failover is invisible: customers see a single progress indicator. Support scripts do not reference provider names or routing decisions.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-05T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-024-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-FAILOVER-02",
+    "source_uri": "fixture://confluence/PROD-FAILOVER-02",
+    "title": "Provider failover experience",
+    "section_path": "Limits",
+    "chunk_text": "Failover applies only when no authorization ID has been assigned. After ambiguity, the flow enters manual reconciliation.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-05T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-025-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "SRE",
+    "source_system": "sharepoint",
+    "source_type": "runbook",
+    "source_id": "SRE-CAPACITY-08",
+    "source_uri": "fixture://sharepoint/SRE-CAPACITY-08",
+    "title": "Payments capacity checklist",
+    "section_path": "Database",
+    "chunk_text": "Verify connection pool headroom at 2\u00d7 projected peak QPS and rehearse read-replica promotion in the staging environment weekly during peak season.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "6",
+    "source_updated_at": "2026-10-14T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-025-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "SRE",
+    "source_system": "sharepoint",
+    "source_type": "runbook",
+    "source_id": "SRE-CAPACITY-08",
+    "source_uri": "fixture://sharepoint/SRE-CAPACITY-08",
+    "title": "Payments capacity checklist",
+    "section_path": "Provider quotas",
+    "chunk_text": "Confirm sandbox and production rate limits with each provider thirty days before Black Friday and document escalation contacts.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "6",
+    "source_updated_at": "2026-10-14T08:00:00Z",
+    "metadata": {
+      "owner": "SRE"
+    }
+  },
+  {
+    "chunk_id": "doc-026-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Mobile",
+    "source_system": "github",
+    "source_type": "release_note",
+    "source_id": "MOB-REL-42",
+    "source_uri": "fixture://github/mobile/releases/42",
+    "title": "Mobile payments SDK 4.2",
+    "section_path": "Migration",
+    "chunk_text": "Apps on SDK 4.1 should adopt 4.2 before January to pick up stricter idempotency persistence. Breaking API changes are none; deprecated retry hooks log warnings only.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "1",
+    "source_updated_at": "2026-10-15T08:00:00Z",
+    "metadata": {
+      "owner": "Mobile"
+    }
+  },
+  {
+    "chunk_id": "doc-026-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Mobile",
+    "source_system": "github",
+    "source_type": "release_note",
+    "source_id": "MOB-REL-42",
+    "source_uri": "fixture://github/mobile/releases/42",
+    "title": "Mobile payments SDK 4.2",
+    "section_path": "Known issues",
+    "chunk_text": "iOS 17 background task limits may delay queue drain; release 4.2.1 will address scheduling priority.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "1",
+    "source_updated_at": "2026-10-15T08:00:00Z",
+    "metadata": {
+      "owner": "Mobile"
+    }
+  },
+  {
+    "chunk_id": "doc-027-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Support",
+    "source_system": "confluence",
+    "source_type": "guide",
+    "source_id": "SUP-ESC-02",
+    "source_uri": "fixture://confluence/SUP-ESC-02",
+    "title": "Payments escalation guide",
+    "section_path": "Severity guide",
+    "chunk_text": "SEV1: widespread authorization failure. SEV2: elevated declines in one region. SEV3: single-merchant configuration or settlement delay under four hours.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-07T08:00:00Z",
+    "metadata": {
+      "owner": "Support"
+    }
+  },
+  {
+    "chunk_id": "doc-027-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Support",
+    "source_system": "confluence",
+    "source_type": "guide",
+    "source_id": "SUP-ESC-02",
+    "source_uri": "fixture://confluence/SUP-ESC-02",
+    "title": "Payments escalation guide",
+    "section_path": "Handoff template",
+    "chunk_text": "Include merchant ID, authorization references, timestamps in UTC, and steps already taken by support.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-07T08:00:00Z",
+    "metadata": {
+      "owner": "Support"
+    }
+  },
+  {
+    "chunk_id": "doc-028-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-OBS-11",
+    "source_uri": "fixture://confluence/ARCH-OBS-11",
+    "title": "Payments telemetry architecture",
+    "section_path": "Trace fields",
+    "chunk_text": "Spans include checkout_session_id, merchant_id, provider_route, and attempt index. PAN, CVV, and full provider payloads are stripped at instrumentation boundaries.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-08T08:00:00Z",
+    "metadata": {
+      "owner": "Platform"
+    }
+  },
+  {
+    "chunk_id": "doc-028-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Platform",
+    "source_system": "confluence",
+    "source_type": "architecture",
+    "source_id": "ARCH-OBS-11",
+    "source_uri": "fixture://confluence/ARCH-OBS-11",
+    "title": "Payments telemetry architecture",
+    "section_path": "Sampling",
+    "chunk_text": "Head-based sampling at 10% in production with tail sampling for all errors and retry exhaustion events.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "3",
+    "source_updated_at": "2026-10-08T08:00:00Z",
+    "metadata": {
+      "owner": "Platform"
+    }
+  },
+  {
+    "chunk_id": "doc-029-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PAY-184",
+    "source_uri": "fixture://jira/PAY-184",
+    "title": "Reconcile delayed provider callbacks",
+    "section_path": "Background",
+    "chunk_text": "Providers occasionally deliver callbacks hours after authorization due to batch reconciliation on their side. The ledger must remain authoritative.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "8",
+    "source_updated_at": "2026-10-15T09:00:00Z",
+    "metadata": {
+      "status": "Review"
+    }
+  },
+  {
+    "chunk_id": "doc-029-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Payments",
+    "source_system": "jira",
+    "source_type": "issue",
+    "source_id": "PAY-184",
+    "source_uri": "fixture://jira/PAY-184",
+    "title": "Reconcile delayed provider callbacks",
+    "section_path": "Test plan",
+    "chunk_text": "Simulate late callbacks in sandbox with clock skew and verify state machine rejects regressions.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "8",
+    "source_updated_at": "2026-10-15T09:00:00Z",
+    "metadata": {
+      "status": "Review"
+    }
+  },
+  {
+    "chunk_id": "doc-030-s1",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-ACCESS-01",
+    "source_uri": "fixture://confluence/PROD-ACCESS-01",
+    "title": "Accessible checkout messaging",
+    "section_path": "Error patterns",
+    "chunk_text": "Use short titles and actionable body text. Do not rely on color alone to indicate severity.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-13T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  },
+  {
+    "chunk_id": "doc-030-s2",
+    "tenant_id": "demo",
+    "project_id": "payments",
+    "team": "Product",
+    "source_system": "confluence",
+    "source_type": "product",
+    "source_id": "PROD-ACCESS-01",
+    "source_uri": "fixture://confluence/PROD-ACCESS-01",
+    "title": "Accessible checkout messaging",
+    "section_path": "Localization",
+    "chunk_text": "Error strings go through the standard localization pipeline; placeholders retain context for screen readers.",
+    "acl_principals": [
+      "group:demo"
+    ],
+    "source_version": "2",
+    "source_updated_at": "2026-10-13T08:00:00Z",
+    "metadata": {
+      "owner": "Product"
+    }
+  }
+]

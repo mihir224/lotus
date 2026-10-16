@@ -1,0 +1,61 @@
+import json
+
+from fastapi.testclient import TestClient
+from lotus_api.main import app
+
+client = TestClient(app)
+
+
+def test_stream_orders_planner_tools_result_and_answer() -> None:
+    response = client.post(
+        "/v1/chat/stream",
+        json={
+            "message": "Show the checkout retry architecture document",
+            "project_id": "payments",
+            "session_id": "session-test",
+        },
+    )
+    assert response.status_code == 200
+    frames = [frame for frame in response.text.split("\n\n") if "data:" in frame]
+    events = [json.loads(frame.split("data: ", 1)[1]) for frame in frames]
+    kinds = [event["event_type"] for event in events]
+    assert kinds[0] == "run.started"
+    assert kinds[-1] == "answer.completed"
+    planner_done = next(
+        index
+        for index, event in enumerate(events)
+        if event["event_type"] == "node.completed" and event["node_id"] == "planner"
+    )
+    documents_started = next(
+        index
+        for index, event in enumerate(events)
+        if event["event_type"] == "node.started" and event["node_id"] == "documents"
+    )
+    result_started = next(
+        index
+        for index, event in enumerate(events)
+        if event["event_type"] == "node.started" and event["node_id"] == "result"
+    )
+    documents_done = next(
+        index
+        for index, event in enumerate(events)
+        if event["event_type"] == "node.completed" and event["node_id"] == "documents"
+    )
+    assert planner_done < documents_started < documents_done < result_started
+    tool_started = next(
+        event
+        for event in events
+        if event["event_type"] == "node.started"
+        and event["node_id"] == "documents.documents_mcp"
+    )
+    assert tool_started["input_preview"] == {
+        "query": "Show the checkout retry architecture document",
+        "project_id": "payments",
+        "meeting_id": None,
+        "repository_id": None,
+        "planning_item_ids": [],
+        "document_ids": [],
+        "date_from": None,
+        "date_to": None,
+    }
+    assert events[-1]["response"]["execution_id"] == events[0]["execution_id"]

@@ -1,52 +1,76 @@
-from .models import AuthContext, ChatRequest, GroundedAnswer, Route, Scope
-from .retrieval import exact_jira, semantic_search, unique_sources
-from .router import route_request
+from functools import lru_cache
+
+from .agents import OrchestrationService
+from .config import get_settings
+from .models import AuthContext, ChatMessageRecord, ChatRequest, GroundedAnswer, RunEvent
+from .run_events import event
+from .storage import get_store
 
 
 def answer_chat(request: ChatRequest, auth: AuthContext) -> GroundedAnswer:
-    decision = route_request(request)
-    scope = Scope(
-        tenant_id=auth.tenant_id,
-        project_id=request.project_id,
-        meeting_id=request.meeting_id,
-        repository_id=request.repository_id,
+    return _run_persisted(request, auth)
+
+
+def stream_chat(request: ChatRequest, auth: AuthContext, emit) -> GroundedAnswer:
+    return _run_persisted(request, auth, emit)
+
+
+def _run_persisted(request: ChatRequest, auth: AuthContext, emit=None) -> GroundedAnswer:
+    store = get_store()
+    session = store.create_chat_session(auth, request.project_id, request.session_id)
+    scoped_request = request.model_copy(update={"session_id": session.session_id})
+    context: list[ChatMessageRecord] = store.get_chat_context(session.session_id, auth)
+    user_message = store.add_chat_message(
+        session.session_id,
+        auth,
+        "user",
+        request.message,
+        "running",
     )
+    completed_event: RunEvent | None = None
 
-    if decision.route is not Route.KNOWLEDGE:
-        return GroundedAnswer(
-            answer=f"The {decision.route.value} specialist is scaffolded but not implemented yet.",
-            evidence=[],
-            scope=scope,
-            uncertainty=["This route is outside the first fixture-backed knowledge slice."],
-            next_action="Use Ask company mode while the next hero flow is being implemented.",
-            route=decision,
+    def durable_emit(item: RunEvent) -> None:
+        nonlocal completed_event
+        if item.event_type == "answer.completed":
+            completed_event = item
+        elif emit:
+            emit(item)
+
+    try:
+        response = get_orchestrator().answer(
+            scoped_request,
+            auth,
+            durable_emit if emit else None,
+            context,
         )
-
-    exact = exact_jira(request, auth)
-    semantic = semantic_search(request, auth)
-    evidence = unique_sources([*exact, *semantic])
-    if not evidence:
-        return GroundedAnswer(
-            answer=(
-                "I could not verify this in the permitted product, technical, Jira, "
-                "or Confluence fixture sources."
-            ),
-            evidence=[],
-            scope=scope,
-            uncertainty=["No authorized evidence matched the question."],
-            next_action="Try a more specific term or confirm the selected project.",
-            route=decision,
+        response.session_id = session.session_id
+        store.update_chat_message_status(user_message.message_id, auth, "completed")
+        store.add_chat_message(
+            session.session_id,
+            auth,
+            "assistant",
+            response.answer,
+            "completed",
+            execution_id=response.execution_id,
+            response=response.model_dump(mode="json"),
         )
+        if emit and completed_event:
+            emit(completed_event.model_copy(update={"response": response}))
+        return response
+    except Exception as exc:
+        store.update_chat_message_status(user_message.message_id, auth, "failed")
+        if emit and completed_event:
+            emit(
+                event(
+                    completed_event.execution_id,
+                    "run.failed",
+                    session_id=session.session_id,
+                    error=type(exc).__name__,
+                )
+            )
+        raise
 
-    citations = " ".join(f"[{index}]" for index in range(1, len(evidence) + 1))
-    summaries = " ".join(item.snippet for item in evidence[:3])
-    return GroundedAnswer(
-        answer=f"{summaries} {citations}",
-        evidence=evidence,
-        scope=scope,
-        uncertainty=[
-            "Fixture-backed lexical retrieval is active; Gemini synthesis is not enabled."
-        ],
-        next_action="Open an evidence item to inspect its source and provenance.",
-        route=decision,
-    )
+
+@lru_cache
+def get_orchestrator() -> OrchestrationService:
+    return OrchestrationService(get_settings(), get_store())

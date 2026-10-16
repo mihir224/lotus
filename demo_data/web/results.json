@@ -1,0 +1,4 @@
+[
+  {"query_terms":["retry","jitter"],"title":"Exponential backoff and jitter","uri":"https://cloud.google.com/storage/docs/retry-strategy","snippet":"Public guidance recommends exponential backoff with jitter for retryable operations and bounded retry attempts."},
+  {"query_terms":["enterprise","search"],"title":"Vertex AI Search overview","uri":"https://cloud.google.com/enterprise-search","snippet":"Vertex AI Search provides grounded enterprise search over configured data sources."}
+]
