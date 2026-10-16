@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -49,6 +50,8 @@ from .registry import (
 logger = logging.getLogger("uvicorn.error.lotus.orchestration")
 tracer = trace.get_tracer("lotus.orchestration")
 
+_EVIDENCE_MARKER = re.compile(r"\s*\[(?:\d+(?:\s*[-,]\s*\d+)*)\](?=[\s.,;:!?)]|$)")
+
 
 def _fixture_requires_transcript_search(message: str) -> bool:
     """Offline fallback only; live ADK Meeting Agent selects its own MCP tool."""
@@ -65,6 +68,31 @@ def _fixture_requires_transcript_search(message: str) -> bool:
         "quote",
     )
     return any(signal in normalized for signal in transcript_signals)
+
+
+def _meeting_analysis_requested(message: str) -> bool:
+    normalized = message.casefold()
+    return any(
+        signal in normalized
+        for signal in (
+            "summary",
+            "summarize",
+            "action item",
+            "open question",
+            "clarification",
+            "anomaly",
+            "decision",
+        )
+    )
+
+
+def _official_source_tokens(message: str) -> tuple[str, ...]:
+    normalized = message.casefold()
+    if not any(term in normalized for term in ("official", "first-party", "first party")):
+        return ()
+    if any(term in normalized for term in ("google", "cloud run", "gcp", "vertex")):
+        return ("google.com", "cloud.google.com", "docs.cloud.google.com")
+    return ()
 
 
 class OrchestrationService:
@@ -165,6 +193,8 @@ class OrchestrationService:
                         request, response, emit, execution_id, conversation or []
                     )
                 )
+                if not response.evidence:
+                    response.answer = _EVIDENCE_MARKER.sub("", response.answer)
             self._node_completed(
                 emit,
                 execution_id,
@@ -406,6 +436,7 @@ class OrchestrationService:
     ) -> tuple[str, bool, int]:
         prompt = (
             "Validated Lotus response contract follows.\n"
+            f"Display timezone: {self.settings.display_timezone}.\n"
             f"Recent conversation:\n{self._conversation_text(conversation or []) or 'none'}\n"
             f"User request: {request.message}\n"
             f"Validated execution plan and authorized evidence: {grounded.model_dump_json()}"
@@ -592,18 +623,7 @@ class OrchestrationService:
                 )
             else:
                 evidence = self._calendar_meeting_evidence(request, auth, plan)
-            analysis_requested = any(
-                signal in request.message.casefold()
-                for signal in (
-                    "summary",
-                    "summarize",
-                    "action item",
-                    "open question",
-                    "clarification",
-                    "anomaly",
-                    "decision",
-                )
-            )
+            analysis_requested = _meeting_analysis_requested(request.message)
             artifacts: list[Artifact] = []
             if analysis_requested:
                 meeting_ids = {
@@ -750,9 +770,54 @@ class OrchestrationService:
             result = SpecialistResult.model_validate_json(output)
             if result.agent is not name:
                 raise ValueError("Specialist returned the wrong agent identity")
+            if name is AgentName.MEETING and _meeting_analysis_requested(request.message):
+                result = self._hydrate_meeting_analysis(result, request, auth)
             return result
         finally:
             release_run_context(context_id)
+
+    def _hydrate_meeting_analysis(
+        self,
+        result: SpecialistResult,
+        request: ChatRequest,
+        auth: AuthContext,
+    ) -> SpecialistResult:
+        """Replace model-shaped analysis artifacts with authoritative stored analysis."""
+        meeting_ids = {request.meeting_id} if request.meeting_id else set()
+        for row in result.evidence:
+            if row.meeting_id:
+                meeting_ids.add(row.meeting_id)
+            elif row.navigation_target and row.navigation_target.kind == "meeting":
+                meeting_ids.add(row.navigation_target.entity_id)
+            elif row.source_system == "calendar" and row.source_id:
+                meeting_ids.add(row.source_id)
+        for artifact in result.artifacts:
+            if artifact.navigation_target and artifact.navigation_target.kind == "meeting":
+                meeting_ids.add(artifact.navigation_target.entity_id)
+
+        artifacts = [
+            artifact
+            for artifact in result.artifacts
+            if artifact.artifact_type != "meeting_analysis"
+        ]
+        for meeting_id in sorted(value for value in meeting_ids if value):
+            record = self.store.get_meeting(meeting_id, auth)
+            if not record or not record.analysis:
+                continue
+            artifacts.append(
+                Artifact(
+                    artifact_type="meeting_analysis",
+                    title=f"Analysis: {record.transcript.title}",
+                    content=record.analysis.model_dump(mode="json"),
+                    navigation_target=NavigationTarget(
+                        kind="meeting",
+                        entity_id=meeting_id,
+                        project_id=request.project_id,
+                        label=f"Open {record.transcript.title}",
+                    ),
+                )
+            )
+        return result.model_copy(update={"artifacts": artifacts})
 
     def _calendar_meeting_evidence(
         self,
@@ -828,11 +893,18 @@ class OrchestrationService:
         return evidence
 
     async def _live_web(self, request: ChatRequest, auth: AuthContext) -> list[Evidence]:
+        official_tokens = _official_source_tokens(request.message)
+        agent_prompt = request.message
+        if official_tokens:
+            agent_prompt = (
+                f"{request.message}\nFirst-party source constraint: only use sources owned by "
+                f"{', '.join(official_tokens)}."
+            )
         try:
             output, grounding, _ = await self._run_agent_details(
                 build_web_agent(self.settings),
                 auth.user_id,
-                request.message,
+                agent_prompt,
                 timeout_seconds=self.settings.web_agent_timeout_seconds,
             )
         except TimeoutError:
@@ -845,6 +917,19 @@ class OrchestrationService:
         evidence: list[Evidence] = []
         for index, chunk in enumerate(chunks):
             if not chunk.web or not chunk.web.uri:
+                continue
+            source_identity = " ".join(
+                value
+                for value in (
+                    chunk.web.title,
+                    getattr(chunk.web, "domain", None),
+                )
+                if value
+            ).casefold()
+            if "grounding-api-redirect" not in chunk.web.uri:
+                source_identity = f"{source_identity} {chunk.web.uri.casefold()}"
+            if official_tokens and not any(token in source_identity for token in official_tokens):
+                logger.info("web.source_filtered reason=non_official")
                 continue
             excerpts = [
                 support.segment.text
@@ -870,6 +955,9 @@ class OrchestrationService:
             )
         if evidence:
             return evidence[: self.settings.max_evidence_items]
+        if official_tokens:
+            logger.warning("web.no_official_grounding_sources")
+            return []
         return [
             Evidence(
                 source_id="agent-platform-google-search",
@@ -965,7 +1053,11 @@ class OrchestrationService:
         elif evidence:
             answer = " ".join(row.snippet for row in evidence[:3])
             answer += " " + " ".join(f"[{index}]" for index in range(1, len(evidence) + 1))
-            uncertainty = ["Fixture runtime composed this answer from deterministic retrieval."]
+            uncertainty = (
+                ["Answer composed from deterministic fixture retrieval."]
+                if self.settings.runtime_mode == "fixture"
+                else []
+            )
         else:
             answer = "I could not verify this in the authorized sources."
             uncertainty = ["No authorized evidence matched the question."]

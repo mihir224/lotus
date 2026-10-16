@@ -63,7 +63,8 @@ def build_result_agent(settings: Settings) -> Agent:
             "Treat calendar-only records as schedule metadata, not proof that a meeting occurred. "
             "Never call a calendar description a transcript or invent discussion content when "
             "transcript_available is false. Present meeting dates and times naturally instead of "
-            "dumping ISO timestamps, and omit internal meeting IDs unless the user asks for them. "
+            "dumping ISO timestamps, use the display timezone supplied in the response prompt, "
+            "and omit internal meeting IDs unless the user asks for them. "
             "Preserve bracketed citation numbers, state uncertainty when evidence is insufficient, "
             "and never claim that a source or meeting said something absent from the evidence."
         ),
@@ -77,7 +78,9 @@ def build_web_agent(settings: Settings) -> Agent:
         timeout=settings.web_agent_timeout_seconds,
         instruction=(
             "Research the user's question on the public web using Google Search. Return a concise "
-            "evidence brief with source titles and URLs. Distinguish sourced facts from inference."
+            "evidence brief with source titles and URLs. Distinguish sourced facts from inference. "
+            "When the request asks for official or first-party guidance, search and cite only the "
+            "organization's own domains; do not use blogs, aggregators, or vendor summaries."
         ),
         tools=[google_search],
     )

@@ -105,7 +105,7 @@ def get_planning_item(item_id: str, ctx: Context) -> dict:
     run = _run_context(ctx)
     rows = get_store().list_board_issues(run.auth, run.request.project_id)
     item = next((row for row in rows if row.issue_key.casefold() == item_id.casefold()), None)
-    return {"planning_item": item.model_dump(mode="json") if item else None}
+    return {"planning_item": _planning_item_payload(item, run) if item else None}
 
 
 @planner_mcp.tool()
@@ -250,10 +250,42 @@ def search_planning_items(
             in f"{row.issue_key} {row.title} {row.description} {row.feature_title}".casefold()
         ]
     bounded_limit = min(max(limit, 1), 50)
+    employees_by_id = {
+        employee.employee_id.casefold(): employee
+        for employee in get_store().search_employees(run.auth, limit=100)
+    }
     return {
         "count": len(rows),
-        "planning_items": [row.model_dump(mode="json") for row in rows[:bounded_limit]],
+        "planning_items": [
+            _planning_item_payload(row, run, employees_by_id)
+            for row in rows[:bounded_limit]
+        ],
     }
+
+
+def _planning_item_payload(item, run: McpRunContext, employees_by_id=None) -> dict:
+    payload = item.model_dump(mode="json")
+    payload["status_label"] = item.status.replace("_", " ").title()
+    if item.assignee_id and item.assignee_id != "unassigned":
+        if employees_by_id is None:
+            employees_by_id = {
+                employee.employee_id.casefold(): employee
+                for employee in get_store().search_employees(run.auth, limit=100)
+            }
+        employee = employees_by_id.get(item.assignee_id.casefold())
+        if employee:
+            payload["assignee"] = {
+                "employee_id": employee.employee_id,
+                "name": employee.name,
+                "designation": employee.designation,
+            }
+        else:
+            payload["assignee"] = {
+                "employee_id": item.assignee_id,
+                "name": item.assignee_id.replace("-", " ").replace("_", " ").title(),
+                "designation": None,
+            }
+    return payload
 
 
 @calendar_mcp.tool()

@@ -16,6 +16,21 @@ def test_code_search_returns_file_line_citations(code_store: CodeStore) -> None:
     assert evidence
     assert any("#L" in (row.uri or "") for row in evidence)
     assert all(row.scope.tenant_id == "demo" for row in evidence)
+    assert len({(row.section or "").split(":", 1)[0] for row in evidence}) == len(evidence)
+
+
+def test_code_search_includes_bounded_neighboring_lines(code_store: CodeStore) -> None:
+    auth = AuthContext(tenant_id="demo", user_id="alice", principals=("group:demo",))
+    evidence = code_store.search(
+        "where is full-jitter retry implemented and how many payment attempts are made",
+        auth,
+        "payments",
+        repository_id="checkout-service",
+    )
+
+    checkout = next(row for row in evidence if "src/checkout.py" in (row.section or ""))
+    assert "for attempt in range(3)" in checkout.snippet
+    assert len(checkout.snippet) <= 2_000
 
 
 def test_code_store_rejects_traversal_and_unauthorized_repositories(

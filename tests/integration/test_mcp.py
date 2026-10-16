@@ -79,6 +79,26 @@ def test_planner_mcp_is_scoped_and_uses_streamable_http(scoped_client: TestClien
         assert all(
             row["status"] == "testing" for row in filtered_payload["planning_items"]
         )
+        assert all("status_label" in row for row in filtered_payload["planning_items"])
+
+        planning_item = scoped_client.post(
+            "/internal/mcp/planner/",
+            headers=headers,
+            json={
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "tools/call",
+                "params": {
+                    "name": "get_planning_item",
+                    "arguments": {"item_id": "PROJ-101"},
+                },
+            },
+        )
+        item_payload = json.loads(planning_item.json()["result"]["content"][0]["text"])[
+            "planning_item"
+        ]
+        assert item_payload["status_label"] == item_payload["status"].replace("_", " ").title()
+        assert item_payload["assignee"]["name"]
 
         documents = scoped_client.post(
             "/internal/mcp/documents/",

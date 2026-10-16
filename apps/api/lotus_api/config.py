@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     agent_rate_limit_window_seconds: int = 300
     telemetry_enabled: bool = False
     mcp_base_url: str = ""
+    display_timezone: str = "Asia/Kolkata"
 
     @property
     def internal_mcp_base_url(self) -> str:

@@ -61,9 +61,16 @@ class CodeStore:
             if repository_id and repo["repository_id"] != repository_id:
                 continue
             for path, content in repo["files"].items():
-                for line_number, line in enumerate(content.splitlines(), start=1):
+                lines = content.splitlines()
+                for line_number, line in enumerate(lines, start=1):
                     score = sum(term in f"{path} {line}".casefold() for term in terms)
                     if score:
+                        start_line = max(1, line_number - 3)
+                        end_line = min(len(lines), line_number + 4)
+                        snippet = "\n".join(
+                            f"{number}: {lines[number - 1]}"
+                            for number in range(start_line, end_line + 1)
+                        )
                         matches.append(
                             (
                                 score,
@@ -73,8 +80,8 @@ class CodeStore:
                                     source_type="code",
                                     title=f"{repo['name']} · {path}",
                                     uri=f"fixture://github/{repo['repository_id']}/{path}#L{line_number}",
-                                    snippet=line[:500],
-                                    section=f"{path}:{line_number}",
+                                    snippet=snippet[:2_000],
+                                    section=f"{path}:{start_line}-{end_line}",
                                     retrieval_method="repository_search",
                                     scope=Scope(
                                         tenant_id=auth.tenant_id,
@@ -86,7 +93,11 @@ class CodeStore:
                             )
                         )
         matches.sort(key=lambda item: (-item[0], item[1].source_id))
-        return [evidence for _, evidence in matches[: min(limit, 20)]]
+        evidence_by_file: dict[str, Evidence] = {}
+        for _, evidence in matches:
+            file_path = (evidence.section or evidence.source_id).split(":", 1)[0]
+            evidence_by_file.setdefault(file_path, evidence)
+        return list(evidence_by_file.values())[: min(limit, 20)]
 
     def _repository(self, repository_id: str, auth: AuthContext, project_id: str) -> dict[str, Any]:
         for repo in self._authorized(auth, project_id):

@@ -1,13 +1,23 @@
 import asyncio
 import json
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 from lotus_api.agents.orchestrator import OrchestrationService
 from lotus_api.agents.planner import fixture_plan
 from lotus_api.config import Settings
 from lotus_api.embeddings import DeterministicEmbedder
-from lotus_api.models import AgentName, ChatRequest, Route
+from lotus_api.models import (
+    AgentName,
+    AuthContext,
+    ChatRequest,
+    Evidence,
+    NavigationTarget,
+    Route,
+    Scope,
+    SpecialistResult,
+)
 from lotus_api.router import route_request
 from lotus_api.storage.memory import MemoryKnowledgeStore
 
@@ -102,3 +112,80 @@ def test_fixture_planner_resolves_arbitrary_calendar_days() -> None:
     )
     assert reversed_date.date_from == datetime(2025, 2, 14, tzinfo=UTC)
     assert reversed_date.date_to == datetime(2025, 2, 15, tzinfo=UTC)
+
+
+def test_meeting_analysis_artifact_is_hydrated_from_store() -> None:
+    settings = Settings(runtime_mode="agent_platform", store_backend="memory")
+    store = MemoryKnowledgeStore(settings, DeterministicEmbedder())
+    service = OrchestrationService(settings, store)
+    auth = AuthContext(tenant_id="demo", user_id="alice", principals=("group:demo",))
+    result = SpecialistResult(
+        agent=AgentName.MEETING,
+        evidence=[
+            Evidence(
+                source_id="M-104",
+                source_system="calendar",
+                source_type="meeting_record",
+                title="Payments reliability review",
+                snippet="Meeting record",
+                retrieval_method="calendar_lookup",
+                scope=Scope(tenant_id="demo", project_id="payments", meeting_id="M-104"),
+                meeting_id="M-104",
+                navigation_target=NavigationTarget(
+                    kind="meeting",
+                    entity_id="M-104",
+                    project_id="payments",
+                    label="Open meeting",
+                ),
+            )
+        ],
+        artifacts=[],
+    )
+
+    hydrated = service._hydrate_meeting_analysis(
+        result,
+        request("Summarize meeting M-104 with action items"),
+        auth,
+    )
+
+    assert len(hydrated.artifacts) == 1
+    assert hydrated.artifacts[0].artifact_type == "meeting_analysis"
+    assert hydrated.artifacts[0].content["summary"]
+
+
+def test_official_web_request_filters_non_first_party_sources() -> None:
+    settings = Settings(runtime_mode="agent_platform", store_backend="memory")
+    store = MemoryKnowledgeStore(settings, DeterministicEmbedder())
+    service = OrchestrationService(settings, store)
+    grounding = SimpleNamespace(
+        grounding_chunks=[
+            SimpleNamespace(
+                web=SimpleNamespace(
+                    uri="https://cloud.google.com/run/docs/triggering/websockets",
+                    title="Cloud Run WebSockets",
+                    domain="cloud.google.com",
+                )
+            ),
+            SimpleNamespace(
+                web=SimpleNamespace(
+                    uri="https://example.com/cloud-run-websockets",
+                    title="Vendor blog",
+                    domain="example.com",
+                )
+            ),
+        ],
+        grounding_supports=[],
+    )
+    service._run_agent_details = AsyncMock(return_value=("Research brief", grounding, 0))
+    auth = AuthContext(tenant_id="demo", user_id="alice", principals=("group:demo",))
+
+    evidence = asyncio.run(
+        service._live_web(
+            request("Find the latest official Google Cloud guidance on Cloud Run WebSockets"),
+            auth,
+        )
+    )
+
+    assert [row.uri for row in evidence] == [
+        "https://cloud.google.com/run/docs/triggering/websockets"
+    ]
