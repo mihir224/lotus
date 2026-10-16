@@ -18,7 +18,12 @@ from .auth import get_auth_context
 from .calendar import create_calendar_event, list_calendar_events
 from .config import get_settings
 from .docs import create_doc_source, get_doc_page, get_docs_catalog, search_docs
-from .mcp_servers import calendar_mcp_app, documents_mcp_app, planner_mcp_app
+from .mcp_servers import (
+    calendar_mcp_app,
+    documents_mcp_app,
+    people_mcp_app,
+    planner_mcp_app,
+)
 from .meetings import process_meeting, summarize_meeting
 from .models import (
     AuthConfig,
@@ -72,7 +77,12 @@ async def lifespan(_: FastAPI):
         settings.active_embedding_model,
     )
     async with AsyncExitStack() as stack:
-        for mcp_app in (planner_mcp_app, calendar_mcp_app, documents_mcp_app):
+        for mcp_app in (
+            planner_mcp_app,
+            calendar_mcp_app,
+            documents_mcp_app,
+            people_mcp_app,
+        ):
             await stack.enter_async_context(mcp_app.router.lifespan_context(mcp_app))
         yield
     logger.info("lotus.shutdown")
@@ -82,6 +92,7 @@ app = FastAPI(title="Lotus API", version="0.1.0", lifespan=lifespan)
 app.mount("/internal/mcp/planner", planner_mcp_app)
 app.mount("/internal/mcp/calendar", calendar_mcp_app)
 app.mount("/internal/mcp/documents", documents_mcp_app)
+app.mount("/internal/mcp/people", people_mcp_app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],

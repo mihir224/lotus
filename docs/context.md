@@ -7,8 +7,8 @@ needed for the task: `backend-context.md`, `frontend-context.md`, or `deployment
 
 ## Product objective
 
-Lotus is a unified enterprise workspace for grounded company knowledge, meeting intelligence,
-document-to-Mermaid output, and public-web research. The current milestone is a hackathon demo
+Lotus is a unified enterprise workspace for grounded company knowledge, employee and stakeholder
+discovery, meeting intelligence, document-to-Mermaid output, and public-web research. The current milestone is a hackathon demo
 using Cloud SQL-backed mock enterprise data plus live Google Agent Platform calls. Fixture runtime
 remains the deterministic, credential-free development and test path.
 

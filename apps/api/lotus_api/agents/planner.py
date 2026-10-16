@@ -71,6 +71,11 @@ def fixture_plan(request: ChatRequest, now: datetime | None = None) -> Execution
         "last week",
         "action item",
         "open question",
+        "summary",
+        "summarize",
+        "clarification",
+        "anomaly",
+        "decision",
     )
     web_signals = ("web", "public", "internet", "current guidance", "research")
     code_signals = (
@@ -96,20 +101,35 @@ def fixture_plan(request: ChatRequest, now: datetime | None = None) -> Execution
     )
     planning_signals = (
         "jira",
-        "project",
         "planner",
         "ticket",
         "issue",
+    )
+    people_signals = (
         "stakeholder",
         "owner",
         "contact",
         "who works",
+        "employee",
+        "people",
+        "team member",
+        "subject matter expert",
+        "expert",
+        "designation",
+        "timezone",
     )
     steps: list[PlanStep] = []
     if any(signal in message for signal in document_signals):
         steps.append(PlanStep(agent=AgentName.DOCUMENTS, intent=request.message))
-    if request.planning_item_ids or any(signal in message for signal in planning_signals):
+    people_requested = any(signal in message for signal in people_signals)
+    if (
+        request.planning_item_ids
+        or any(signal in message for signal in planning_signals)
+        or ("project" in message and not people_requested)
+    ):
         steps.append(PlanStep(agent=AgentName.PLANNING, intent=request.message))
+    if people_requested:
+        steps.append(PlanStep(agent=AgentName.PEOPLE, intent=request.message))
     if request.meeting_id or any(signal in message for signal in meeting_signals):
         steps.append(PlanStep(agent=AgentName.MEETING, intent=request.message))
     elif " call " in f" {message} ":
@@ -139,17 +159,6 @@ def fixture_plan(request: ChatRequest, now: datetime | None = None) -> Execution
             )
         steps.append(PlanStep(agent=AgentName.DOCUMENTS, intent=request.message))
 
-    anomaly_requested = any(
-        signal in message for signal in ("anomaly", "open question", "action item", "gap")
-    )
-    if anomaly_requested and any(step.agent is AgentName.MEETING for step in steps):
-        steps.append(
-            PlanStep(
-                agent=AgentName.ANOMALY,
-                intent="Analyze meeting-content gaps after meeting retrieval.",
-                depends_on=[AgentName.MEETING],
-            )
-        )
     steps.append(
         PlanStep(
             agent=AgentName.RESULT,

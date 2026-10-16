@@ -1,7 +1,8 @@
 # Lotus
 
-Lotus is a unified enterprise AI workspace for trusted knowledge retrieval,
-meeting intelligence, document analysis, and grounded web research.
+Lotus is a unified enterprise AI workspace for trusted knowledge retrieval, employee and
+stakeholder discovery, meeting intelligence, document analysis, code context, and grounded web
+research.
 
 This repository starts from the hackathon PRD in:
 
@@ -12,12 +13,14 @@ This repository starts from the hackathon PRD in:
 - React + Vite + TypeScript for the web workspace
 - Python + FastAPI for the API and worker boundaries
 - Google ADK 2.12 and Gemini Enterprise Agent Platform for live orchestration
-- PostgreSQL 17 with pgvector for document and timestamped transcript retrieval
-- Deterministic fixture adapters for Jira, Confluence, SharePoint, GitHub, calendar, and web
+- PostgreSQL 16 with pgvector for document and timestamped transcript retrieval
+- Scoped mock MCP adapters for planning, documents, calendar, and the employee directory
+- Deterministic repository and web fixtures for credential-free development
 
-There is no user-selected chat mode. The Planner Agent selects Data, Meeting, and
-Web specialists, optionally runs Anomaly after meeting evidence, and always runs
-the Result Agent last. Fixture mode uses the same contracts without cloud credentials.
+There is no user-selected chat mode. The Planner Agent selects Documents, Planning, People,
+Meeting, Web, and Code specialists and always runs the Result Agent last. Meeting analysis is a
+Meeting Agent capability; anomaly detection is a deterministic tool, not a separate agent. Fixture
+mode uses the same contracts without cloud credentials.
 
 ## Repository layout
 
@@ -64,9 +67,10 @@ For a zero-infrastructure fixture run, set `STORE_BACKEND=memory`. The deployed 
 SQL PostgreSQL with pgvector and deterministic `fixture:hash-v1:768` embeddings; packaged fixtures
 are loaded only by the idempotent seed job. For live Gemini,
 set `RUNTIME_MODE=agent_platform`, configure the project and Application Default
-Credentials, and re-seed so stored vectors and query vectors share the same
-embedding model. The live defaults use the Agent Platform `global` endpoint,
-`gemini-3.7-flash`, and 768-dimensional `gemini-embedding-001` vectors.
+Credentials. Generation and embeddings are configured independently: the deployed service uses
+the Agent Platform `global` endpoint with `gemini-3.7-flash`, while document and transcript vectors
+remain on the deterministic 768-dimensional `fixture:hash-v1:768` model. If the embedding runtime
+changes, re-seed so stored vectors and query vectors use the same model ID.
 
 The calendar/meeting integration contract is documented in
 [docs/meeting-api-contract.md](docs/meeting-api-contract.md).

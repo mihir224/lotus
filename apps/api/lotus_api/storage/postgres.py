@@ -1008,3 +1008,52 @@ class PostgresKnowledgeStore:
                 for link, employee in links
             ],
         )
+
+    def search_employees(
+        self,
+        auth: AuthContext,
+        query: str = "",
+        team: str | None = None,
+        designation: str | None = None,
+        timezone: str | None = None,
+        limit: int = 20,
+    ) -> list[Employee]:
+        statement = select(EmployeeRow).where(
+            EmployeeRow.tenant_id == auth.tenant_id,
+            EmployeeRow.acl_principals.op("&&")(list(auth.principals)),
+        )
+        normalized = query.strip()
+        if normalized:
+            pattern = f"%{normalized}%"
+            statement = statement.where(
+                EmployeeRow.employee_id.ilike(pattern)
+                | EmployeeRow.name.ilike(pattern)
+                | EmployeeRow.email.ilike(pattern)
+                | EmployeeRow.designation.ilike(pattern)
+                | EmployeeRow.team.ilike(pattern)
+                | EmployeeRow.contact_handle.ilike(pattern)
+            )
+        if team:
+            statement = statement.where(EmployeeRow.team.ilike(team))
+        if designation:
+            statement = statement.where(EmployeeRow.designation.ilike(f"%{designation}%"))
+        if timezone:
+            statement = statement.where(EmployeeRow.timezone.ilike(timezone))
+        statement = statement.order_by(EmployeeRow.name, EmployeeRow.employee_id).limit(
+            min(max(limit, 1), 50)
+        )
+        with Session(self.engine) as session:
+            rows = session.scalars(statement).all()
+        return [
+            Employee(
+                employee_id=row.employee_id,
+                name=row.name,
+                email=row.email,
+                designation=row.designation,
+                team=row.team,
+                avatar_url=row.avatar_url,
+                timezone=row.timezone,
+                contact_handle=row.contact_handle,
+            )
+            for row in rows
+        ]

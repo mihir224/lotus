@@ -32,14 +32,18 @@ def test_meeting_scope_is_hard_signal() -> None:
     assert result.route is Route.MEETING
 
 
-def test_planner_combines_data_meeting_and_anomaly() -> None:
+def test_planner_keeps_meeting_analysis_inside_meeting_agent() -> None:
     plan = fixture_plan(request("Compare the architecture with meeting action item gaps"))
     assert [step.agent for step in plan.steps] == [
         AgentName.DOCUMENTS,
         AgentName.MEETING,
-        AgentName.ANOMALY,
         AgentName.RESULT,
     ]
+
+
+def test_planner_routes_employee_contacts_to_people() -> None:
+    plan = fixture_plan(request("Who are the stakeholders I can contact?"))
+    assert [step.agent for step in plan.steps] == [AgentName.PEOPLE, AgentName.RESULT]
 
 
 def test_live_plan_accepts_direct_result_for_conversation() -> None:
@@ -79,9 +83,9 @@ def test_live_planner_timeout_falls_back_to_result_without_data() -> None:
     assert "timed out" in plan.reason
 
 
-def test_planner_routes_project_stakeholders_to_planning() -> None:
+def test_planner_routes_project_stakeholders_to_people() -> None:
     plan = fixture_plan(request("Who are the stakeholders for the payments project?"))
-    assert [step.agent for step in plan.steps] == [AgentName.PLANNING, AgentName.RESULT]
+    assert [step.agent for step in plan.steps] == [AgentName.PEOPLE, AgentName.RESULT]
 
 
 def test_fixture_planner_resolves_arbitrary_calendar_days() -> None:

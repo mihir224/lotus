@@ -85,6 +85,10 @@ documents_mcp = MCPServer(
     "lotus-documents-mcp",
     instructions="Read-only access to authorized Lotus documents.",
 )
+people_mcp = MCPServer(
+    "lotus-people-mcp",
+    instructions="Read-only access to authorized employee directory and stakeholder data.",
+)
 
 
 @planner_mcp.tool()
@@ -115,6 +119,106 @@ def get_project_stakeholders(project_id: str, ctx: Context) -> dict:
             [row.model_dump(mode="json") for row in project.stakeholders] if project else []
         ),
     }
+
+
+@people_mcp.tool()
+def get_employee(employee_id: str, ctx: Context) -> dict:
+    """Get one authorized employee profile by employee ID, email, handle, or exact name."""
+    run = _run_context(ctx)
+    normalized = employee_id.strip().casefold()
+    employees = get_store().search_employees(run.auth, limit=50)
+    employee = next(
+        (
+            row
+            for row in employees
+            if normalized
+            in {
+                row.employee_id.casefold(),
+                row.email.casefold(),
+                row.contact_handle.casefold(),
+                row.name.casefold(),
+            }
+        ),
+        None,
+    )
+    return {"employee": employee.model_dump(mode="json") if employee else None}
+
+
+@people_mcp.tool()
+def search_employees(
+    query: str,
+    ctx: Context,
+    team: str | None = None,
+    designation: str | None = None,
+    timezone: str | None = None,
+    limit: int = 20,
+) -> dict:
+    """Search authorized employee profiles using structured directory fields."""
+    run = _run_context(ctx)
+    rows = get_store().search_employees(
+        run.auth,
+        query=query,
+        team=team,
+        designation=designation,
+        timezone=timezone,
+        limit=limit,
+    )
+    return {
+        "count": len(rows),
+        "employees": [row.model_dump(mode="json") for row in rows],
+    }
+
+
+@people_mcp.tool()
+def get_employee_project_stakeholders(project_id: str, ctx: Context) -> dict:
+    """List authorized employee contacts associated with a project and their project roles."""
+    run = _run_context(ctx)
+    project = get_store().get_workspace_project(project_id, run.auth)
+    return {
+        "project_id": project_id,
+        "project_name": project.name if project else None,
+        "stakeholders": (
+            [row.model_dump(mode="json") for row in project.stakeholders] if project else []
+        ),
+    }
+
+
+@people_mcp.tool()
+def find_subject_matter_experts(
+    topic: str,
+    ctx: Context,
+    project_id: str | None = None,
+    limit: int = 10,
+) -> dict:
+    """Find possible experts using explicit team, designation, and project-role metadata."""
+    run = _run_context(ctx)
+    candidates = get_store().search_employees(run.auth, query=topic, limit=limit)
+    rows = [
+        {"employee": row.model_dump(mode="json"), "basis": "directory field match"}
+        for row in candidates
+    ]
+    if project_id:
+        project = get_store().get_workspace_project(project_id, run.auth)
+        if project:
+            topic_words = set(topic.casefold().split())
+            for stakeholder in project.stakeholders:
+                searchable = (
+                    f"{project.name} {project.description} {project.team} "
+                    f"{stakeholder.role} {stakeholder.employee.designation} "
+                    f"{stakeholder.employee.team}"
+                ).casefold()
+                if topic_words and not any(word in searchable for word in topic_words):
+                    continue
+                payload = stakeholder.employee.model_dump(mode="json")
+                if any(row["employee"]["employee_id"] == payload["employee_id"] for row in rows):
+                    continue
+                rows.append(
+                    {
+                        "employee": payload,
+                        "basis": f"{stakeholder.role} on {project.name}",
+                    }
+                )
+    return {"topic": topic, "experts": rows[: min(max(limit, 1), 20)]}
 
 
 @planner_mcp.tool()
@@ -233,6 +337,28 @@ def search_transcript_chunks(query: str, ctx: Context) -> dict:
     return {"evidence": _bounded_evidence(rows)}
 
 
+@calendar_mcp.tool()
+def analyze_meeting(meeting_id: str, ctx: Context) -> dict:
+    """Generate or reuse structured meeting analysis, then run deterministic anomaly checks."""
+    from .meetings import summarize_meeting
+
+    run = _run_context(ctx)
+    record = summarize_meeting(get_store(), meeting_id, run.auth)
+    if record is None:
+        return {"meeting_id": meeting_id, "analysis": None, "transcript_available": False}
+    return {
+        "meeting_id": meeting_id,
+        "title": record.transcript.title,
+        "analysis": record.analysis.model_dump(mode="json") if record.analysis else None,
+        "analysis_metadata": (
+            record.analysis_metadata.model_dump(mode="json")
+            if record.analysis_metadata
+            else None
+        ),
+        "transcript_available": True,
+    }
+
+
 @documents_mcp.tool()
 def get_document(document_id: str, ctx: Context) -> dict:
     """Get an authorized document by source ID."""
@@ -330,5 +456,8 @@ calendar_mcp_app = calendar_mcp.streamable_http_app(
     streamable_http_path="/", stateless_http=True, json_response=True, max_sessions=32
 )
 documents_mcp_app = documents_mcp.streamable_http_app(
+    streamable_http_path="/", stateless_http=True, json_response=True, max_sessions=32
+)
+people_mcp_app = people_mcp.streamable_http_app(
     streamable_http_path="/", stateless_http=True, json_response=True, max_sessions=32
 )

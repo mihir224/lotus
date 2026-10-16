@@ -23,6 +23,11 @@ def test_seed_is_idempotent_and_enforces_tenant_scope() -> None:
     unauthorized = AuthContext(tenant_id="other", user_id="x", principals=("group:demo",))
     assert store.search_documents("checkout retry", unauthorized, "payments") == []
     assert store.search_transcripts("retry jitter", unauthorized, "payments") == []
+    assert store.search_employees(unauthorized) == []
+
+    authorized = AuthContext(tenant_id="demo", user_id="x", principals=("group:demo",))
+    platform = store.search_employees(authorized, team="Platform")
+    assert {row.employee_id for row in platform} == {"emp-mihir", "emp-priya"}
 
 
 def test_cloud_sql_uses_secret_backed_unix_socket_url() -> None:

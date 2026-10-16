@@ -11,19 +11,21 @@
 ## Orchestration contract
 
 `agents/orchestrator.py` owns controlled execution. In `agent_platform` mode, the Google ADK
-Planner produces an `ExecutionPlan`; independent Documents, Planning, Meeting, Web, and Code work
-runs concurrently; Anomaly runs only after Meeting; Result runs last. A conversational request may
-validly use only Result. If Planner times out, use the safe Result-only degraded plan—never retrieve
-arbitrary data.
+Planner produces an `ExecutionPlan`; independent Documents, Planning, People, Meeting, Web, and
+Code work runs concurrently; Result runs last. A conversational request may validly use only Result.
+If Planner times out, use the safe Result-only degraded plan—never retrieve arbitrary data.
 
 Current live boundaries:
 
 - Planner and Result are ADK/Gemini agents.
 - Web uses the ADK Google Search tool and converts grounding metadata to `Evidence`.
-- Documents, Planning, and Meeting are ADK specialists using scoped internal Streamable HTTP MCP tools.
+- Documents, Planning, People, and Meeting are ADK specialists using scoped internal Streamable
+  HTTP MCP tools.
 - Code is a read-only specialist over the authorized repositories packaged under `demo_data/code`.
-- Anomaly reads stored meeting analysis; deterministic transcript analysis lives in
-  `meeting_analysis.py`.
+- Meeting owns transcript retrieval and schema-constrained analysis. `analyze_meeting` exposes the
+  shared processing path to chat; the Summarize API calls the same path directly. Deterministic
+  anomaly and clarification tools live in `meeting_analysis.py`; there is no Anomaly Agent or
+  Meeting Analysis Agent.
 - Every ADK call has a bounded timeout. Preserve safe fallbacks and related logs.
 
 Fixture mode uses `fixture_plan`, deterministic normalized hash embeddings, fixture web results,
@@ -35,11 +37,16 @@ The specialist chooses the narrow tool after the Planner chooses the specialist:
 
 - Documents MCP: `list_documents` for inventories/counts, `get_document` for a known ID, and
   `search_documents` only for semantic content retrieval.
-- Planner MCP: `get_project`, `get_planning_item`, `get_project_stakeholders`, and structured
-  `search_planning_items`; Planning never uses vector retrieval.
+- Planner MCP: `get_project`, `get_planning_item`, the compatibility
+  `get_project_stakeholders`, and structured `search_planning_items`; Planning never uses vector
+  retrieval. New stakeholder/contact questions route to People.
+- Employee Directory MCP: `get_employee`, `search_employees`,
+  `get_employee_project_stakeholders`, and `find_subject_matter_experts`. People results are scoped
+  by tenant and ACL; expertise matches must retain their structured-data basis.
 - Calendar MCP: `search_meetings` for arbitrary date ranges, counts, titles, and metadata;
   `get_meeting` for one selected meeting; `search_transcript_chunks` only for topics, quotes,
-  keywords, or discussion content.
+  keywords, or discussion content; and `analyze_meeting` for summary, decisions, action items,
+  questions, clarifications, and deterministic anomaly checks.
 
 Do not reintroduce keyword routing in the live path. Deterministic phrase/date handling is an
 offline fixture fallback only. MCP scope comes from trusted run context, never model-supplied tenant

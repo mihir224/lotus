@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-from .agents.registry import build_meeting_analysis_agent
+from .agents.registry import build_meeting_agent
 from .config import get_settings
 from .meeting_analysis import analyze_transcript, build_clarifications, detect_content_anomalies
 from .models import (
@@ -28,7 +28,7 @@ def _input_hash(transcript: MeetingTranscriptInput) -> str:
 
 async def _live_analysis(transcript: MeetingTranscriptInput) -> MeetingAnalysis:
     settings = get_settings()
-    agent = build_meeting_analysis_agent(settings)
+    agent = build_meeting_agent(settings, task="summarize")
     runner = InMemoryRunner(agent=agent, app_name="lotus")
     session = await runner.session_service.create_session(app_name="lotus", user_id="meeting")
     prompt = "Timestamped transcript JSON:\n" + transcript.model_dump_json()
@@ -88,7 +88,7 @@ def process_meeting(
             record.analysis = asyncio.run(_live_analysis(transcript))
             method = "agent_platform"
         except Exception as exc:
-            logger.warning("meeting_analysis.fallback reason=%s", type(exc).__name__)
+            logger.warning("meeting_agent.analysis_fallback reason=%s", type(exc).__name__)
             record.analysis = analyze_transcript(transcript)
             method = "fallback"
     else:

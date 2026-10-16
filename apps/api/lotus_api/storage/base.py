@@ -11,6 +11,7 @@ from ..models import (
     ChatSessionDetail,
     ChatSessionPage,
     ChatSessionSummary,
+    Employee,
     Evidence,
     MeetingListItem,
     MeetingRecord,
@@ -148,3 +149,13 @@ class KnowledgeStore(Protocol):
     def get_workspace_project(
         self, project_id: str, auth: AuthContext
     ) -> WorkspaceProject | None: ...
+
+    def search_employees(
+        self,
+        auth: AuthContext,
+        query: str = "",
+        team: str | None = None,
+        designation: str | None = None,
+        timezone: str | None = None,
+        limit: int = 20,
+    ) -> list[Employee]: ...

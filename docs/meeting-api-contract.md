@@ -5,12 +5,15 @@ The UI should call the backend; it should not import fixture files.
 - `GET /v1/calendar/events?project_id=payments&date_from=...&date_to=...` lists work-week calendar
   events from the KnowledgeStore (seeded from `demo_data/calendar/events.json`). Each row includes a
   `meeting_id` for detail lookup.
-- `POST /v1/calendar/events` creates a calendar event and linked meeting record for the active tenant.
-  Created events are persisted in the KnowledgeStore (`calendar_events` when using Postgres). Re-run
-  `make seed` to refresh fixture rows from disk without removing user-created events that share new ids.
+- `POST /v1/calendar/events` creates schedule metadata for the active tenant. It does not fabricate
+  a transcript or processed meeting record. Created events are persisted in the KnowledgeStore
+  (`calendar_events` when using Postgres). Re-run `make seed` to refresh fixture rows from disk
+  without removing user-created events that use new IDs.
 - `GET /v1/meetings?project_id=payments&team=platform&date_from=...&date_to=...` lists calendar-ready historical meetings.
 - `GET /v1/meetings/{meeting_id}` returns metadata, the complete timestamped transcript, and generated analysis.
 - `POST /v1/meetings/{meeting_id}/process` accepts a transcript payload and idempotently builds transcript embeddings plus analysis.
+- `POST /v1/meetings/{meeting_id}/summarize` invokes the same Meeting Agent analysis path used by
+  Calendar MCP `analyze_meeting`, then applies deterministic anomaly and clarification tools.
 
 All calls may send `X-Lotus-Tenant` and `X-Lotus-User`. The process body contains
 `calendar_event_id`, `title`, `project_id`, `team`, `started_at`, `ended_at`,
@@ -32,6 +35,12 @@ All calls may send `X-Lotus-Tenant` and `X-Lotus-User`. The process body contain
 - `POST /v1/docs/sources` creates a Lotus-authored page in the KnowledgeStore only (not the fixture
   file); it is embedded for chat retrieval with `source_system: lotus`.
 
-Chat requests contain only `message`, `project_id`, and optional meeting/repository context.
-There is no mode field: the Planner Agent selects Data, Meeting, Web, and Anomaly work,
-and the Result Agent always runs last.
+Chat requests contain `message`, `project_id`, and optional session, meeting, repository, planning
+item, and document context. There is no mode field: the Planner Agent selects Documents, Planning,
+People, Meeting, Web, and Code work, and the Result Agent always runs last. Summary, action-item,
+clarification, and anomaly questions stay within Meeting; they never schedule separate analysis or
+anomaly agents.
+
+The internal Employee Directory MCP exposes authorized employee profiles, structured directory
+search, project stakeholders, and metadata-backed expert discovery. It is consumed by People Agent;
+the browser does not call it directly.

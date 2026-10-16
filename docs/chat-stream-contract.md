@@ -15,8 +15,9 @@ authorized by Lotus rather than accepting browser-provided page content.
 - `heartbeat`
 
 `answer.completed.response` contains the final `GroundedAnswer`. Agent nodes use IDs such as
-`planner`, `documents`, `planning`, `meeting`, `web`, `code`, `anomaly`, and `result`. Tool nodes set `parent_id`
-to their owning agent. Input/output previews are deliberately bounded and redacted.
+`planner`, `documents`, `planning`, `people`, `meeting`, `web`, `code`, and `result`. Tool nodes set
+`parent_id` to their owning agent. Input/output previews are deliberately bounded; credentials,
+system prompts, full transcripts, and unrestricted payloads remain redacted.
 
 Example request:
 

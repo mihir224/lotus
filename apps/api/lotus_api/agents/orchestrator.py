@@ -39,6 +39,7 @@ from .planner import fixture_plan
 from .registry import (
     build_documents_agent,
     build_meeting_agent,
+    build_people_agent,
     build_planner_agent,
     build_planning_agent,
     build_result_agent,
@@ -132,6 +133,7 @@ class OrchestrationService:
                 in {
                     AgentName.DOCUMENTS,
                     AgentName.PLANNING,
+                    AgentName.PEOPLE,
                     AgentName.MEETING,
                     AgentName.WEB,
                     AgentName.CODE,
@@ -152,25 +154,6 @@ class OrchestrationService:
                 }
                 results = [futures[name].result() for name in specialist_names]
 
-            if any(step.agent is AgentName.ANOMALY for step in plan.steps):
-                anomaly_started = perf_counter()
-                self._node_started(emit, execution_id, "anomaly", "Anomaly", request)
-                anomaly_result = self._run_anomaly(results, auth)
-                results.append(anomaly_result)
-                self._node_completed(
-                    emit,
-                    execution_id,
-                    "anomaly",
-                    "Anomaly",
-                    anomaly_started,
-                    {"artifacts": len(anomaly_result.artifacts)},
-                )
-                logger.info(
-                    "agent.complete execution_id=%s agent=anomaly evidence=%s artifacts=%s",
-                    execution_id,
-                    len(anomaly_result.evidence),
-                    len(anomaly_result.artifacts),
-                )
             result_started = perf_counter()
             self._node_started(emit, execution_id, "result", "Result", request)
             response = self._run_result(request, auth, plan, results, execution_id)
@@ -400,14 +383,12 @@ class OrchestrationService:
         allowed = {
             AgentName.DOCUMENTS,
             AgentName.PLANNING,
+            AgentName.PEOPLE,
             AgentName.MEETING,
             AgentName.WEB,
             AgentName.CODE,
         }
         specialists = [step for step in plan.steps if step.agent in allowed]
-        anomaly = [step for step in plan.steps if step.agent is AgentName.ANOMALY]
-        if anomaly and not any(step.agent is AgentName.MEETING for step in specialists):
-            raise ValueError("Anomaly agent requires meeting evidence")
         result_steps = [step for step in plan.steps if step.agent is AgentName.RESULT]
         if len(result_steps) != 1 or plan.steps[-1].agent is not AgentName.RESULT:
             raise ValueError("Agent Platform planner must schedule Result last")
@@ -453,7 +434,12 @@ class OrchestrationService:
 
     def _run_specialist(self, name, request, auth, plan) -> SpecialistResult:
         live = self.settings.runtime_mode in {"agent_platform", "vertex"}
-        if live and name in {AgentName.DOCUMENTS, AgentName.PLANNING, AgentName.MEETING}:
+        if live and name in {
+            AgentName.DOCUMENTS,
+            AgentName.PLANNING,
+            AgentName.PEOPLE,
+            AgentName.MEETING,
+        }:
             try:
                 return asyncio.run(self._live_mcp_specialist(name, request, auth, plan))
             except Exception as exc:
@@ -539,15 +525,63 @@ class OrchestrationService:
                         )
                     )
             return SpecialistResult(agent=name, evidence=evidence)
-        if name is AgentName.MEETING:
-            if not _fixture_requires_transcript_search(request.message):
-                return SpecialistResult(
-                    agent=name,
-                    evidence=self._calendar_meeting_evidence(request, auth, plan),
+        if name is AgentName.PEOPLE:
+            people = self.store.search_employees(
+                auth,
+                query="",
+                limit=self.settings.max_evidence_items,
+            )
+            normalized = request.message.casefold()
+            project = self.store.get_workspace_project(request.project_id, auth)
+            stakeholder_roles = {
+                row.employee.employee_id: row.role
+                for row in (project.stakeholders if project else [])
+            }
+            matched = [
+                employee
+                for employee in people
+                if any(
+                    token in normalized
+                    for token in (
+                        employee.name.casefold(),
+                        employee.team.casefold(),
+                        employee.designation.casefold(),
+                        employee.employee_id.casefold(),
+                    )
                 )
+                or employee.employee_id in stakeholder_roles
+            ]
+            selected = matched or people
             return SpecialistResult(
                 agent=name,
-                evidence=self.store.search_transcripts(
+                evidence=[
+                    Evidence(
+                        source_id=employee.employee_id,
+                        source_system="employee_directory",
+                        source_type="employee_profile",
+                        title=employee.name,
+                        snippet=(
+                            f"{employee.name} — {employee.designation}, {employee.team}. "
+                            f"Email: {employee.email}; contact: {employee.contact_handle}; "
+                            f"timezone: {employee.timezone}."
+                            + (
+                                f" Project role: {stakeholder_roles[employee.employee_id]}."
+                                if employee.employee_id in stakeholder_roles
+                                else ""
+                            )
+                        ),
+                        retrieval_method="employee_directory_lookup",
+                        scope=Scope(
+                            tenant_id=auth.tenant_id,
+                            project_id=request.project_id,
+                        ),
+                    )
+                    for employee in selected[: self.settings.max_evidence_items]
+                ],
+            )
+        if name is AgentName.MEETING:
+            if _fixture_requires_transcript_search(request.message):
+                evidence = self.store.search_transcripts(
                     request.message,
                     auth,
                     request.project_id,
@@ -555,8 +589,39 @@ class OrchestrationService:
                     request.meeting_id,
                     plan.date_from,
                     plan.date_to,
-                ),
+                )
+            else:
+                evidence = self._calendar_meeting_evidence(request, auth, plan)
+            analysis_requested = any(
+                signal in request.message.casefold()
+                for signal in (
+                    "summary",
+                    "summarize",
+                    "action item",
+                    "open question",
+                    "clarification",
+                    "anomaly",
+                    "decision",
+                )
             )
+            artifacts: list[Artifact] = []
+            if analysis_requested:
+                meeting_ids = {
+                    row.meeting_id for row in evidence if row.meeting_id is not None
+                }
+                if request.meeting_id:
+                    meeting_ids.add(request.meeting_id)
+                for meeting_id in sorted(meeting_ids):
+                    record = self.store.get_meeting(meeting_id, auth)
+                    if record and record.analysis:
+                        artifacts.append(
+                            Artifact(
+                                artifact_type="meeting_analysis",
+                                title=f"Analysis: {record.transcript.title}",
+                                content=record.analysis.model_dump(mode="json"),
+                            )
+                        )
+            return SpecialistResult(agent=name, evidence=evidence, artifacts=artifacts)
         if name is AgentName.CODE:
             return SpecialistResult(
                 agent=name,
@@ -588,6 +653,7 @@ class OrchestrationService:
         tool = {
             AgentName.DOCUMENTS: "documents_mcp",
             AgentName.PLANNING: "planner_mcp",
+            AgentName.PEOPLE: "people_mcp",
             AgentName.MEETING: "calendar_mcp",
             AgentName.WEB: "web_search",
             AgentName.CODE: "repository_search",
@@ -667,6 +733,7 @@ class OrchestrationService:
             builder = {
                 AgentName.DOCUMENTS: build_documents_agent,
                 AgentName.PLANNING: build_planning_agent,
+                AgentName.PEOPLE: build_people_agent,
                 AgentName.MEETING: build_meeting_agent,
             }[name]
             prompt = (
@@ -842,23 +909,6 @@ class OrchestrationService:
             )
             for row in ranked[:3]
         ]
-
-    def _run_anomaly(self, results: list[SpecialistResult], auth: AuthContext) -> SpecialistResult:
-        artifacts: list[Artifact] = []
-        meeting_ids = {
-            row.meeting_id for result in results for row in result.evidence if row.meeting_id
-        }
-        for meeting_id in sorted(meeting_ids):
-            record = self.store.get_meeting(meeting_id, auth)
-            if record and record.analysis:
-                artifacts.append(
-                    Artifact(
-                        artifact_type="meeting_analysis",
-                        title=f"Analysis: {record.transcript.title}",
-                        content=record.analysis.model_dump(mode="json"),
-                    )
-                )
-        return SpecialistResult(agent=AgentName.ANOMALY, artifacts=artifacts)
 
     def _run_result(self, request, auth, plan, results, execution_id) -> GroundedAnswer:
         evidence: list[Evidence] = []

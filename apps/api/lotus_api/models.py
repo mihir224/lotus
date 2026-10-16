@@ -20,9 +20,9 @@ class Route(StrEnum):
 class AgentName(StrEnum):
     DOCUMENTS = "documents"
     PLANNING = "planning"
+    PEOPLE = "people"
     MEETING = "meeting"
     WEB = "web"
-    ANOMALY = "anomaly"
     CODE = "code"
     RESULT = "result"
 

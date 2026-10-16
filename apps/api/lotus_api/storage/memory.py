@@ -54,6 +54,7 @@ class MemoryKnowledgeStore:
         self.board_issues: dict[str, dict[str, Any]] = {}
         self.chat_sessions: dict[str, dict[str, Any]] = {}
         self.projects: dict[str, WorkspaceProject] = {}
+        self.employees: dict[str, dict[str, Any]] = {}
         self.seed()
 
     def ready(self) -> bool:
@@ -122,14 +123,17 @@ class MemoryKnowledgeStore:
                 issue,
                 list(payload.get("acl_principals", ["group:demo"])),
             )
-        employees = {
-            row["employee_id"]: Employee.model_validate(
+        self.employees = {
+            row["employee_id"]: {
+                "employee": Employee.model_validate(
                 {
                     key: value
                     for key, value in row.items()
                     if key not in {"tenant_id", "acl_principals"}
-                }
-            )
+                }),
+                "tenant_id": row["tenant_id"],
+                "acl_principals": row.get("acl_principals", ["group:demo"]),
+            }
             for row in self._load("enterprise/employees.json")
         }
         for row in self._load("enterprise/projects.json"):
@@ -140,9 +144,12 @@ class MemoryKnowledgeStore:
                 status=row["status"],
                 team=row["team"],
                 stakeholders=[
-                    ProjectStakeholder(role=link["role"], employee=employees[link["employee_id"]])
+                    ProjectStakeholder(
+                        role=link["role"],
+                        employee=self.employees[link["employee_id"]]["employee"],
+                    )
                     for link in row.get("stakeholders", [])
-                    if link["employee_id"] in employees
+                    if link["employee_id"] in self.employees
                 ],
             )
         return {
@@ -150,7 +157,7 @@ class MemoryKnowledgeStore:
             "meetings": len(self.meetings),
             "calendar_events": len(calendar_rows),
             "board_issues": len(board_rows),
-            "employees": len(employees),
+            "employees": len(self.employees),
             "projects": len(self.projects),
         }
 
@@ -629,3 +636,36 @@ class MemoryKnowledgeStore:
         if auth.tenant_id != "demo" or "group:demo" not in auth.principals:
             return None
         return self.projects.get(project_id)
+
+    def search_employees(
+        self,
+        auth: AuthContext,
+        query: str = "",
+        team: str | None = None,
+        designation: str | None = None,
+        timezone: str | None = None,
+        limit: int = 20,
+    ) -> list[Employee]:
+        normalized = query.strip().casefold()
+        matches: list[Employee] = []
+        for payload in self.employees.values():
+            if payload["tenant_id"] != auth.tenant_id:
+                continue
+            if not set(payload["acl_principals"]) & set(auth.principals):
+                continue
+            employee = payload["employee"]
+            if team and employee.team.casefold() != team.casefold():
+                continue
+            if designation and designation.casefold() not in employee.designation.casefold():
+                continue
+            if timezone and employee.timezone.casefold() != timezone.casefold():
+                continue
+            searchable = (
+                f"{employee.employee_id} {employee.name} {employee.email} "
+                f"{employee.designation} {employee.team} {employee.contact_handle}"
+            ).casefold()
+            if normalized and normalized not in searchable:
+                continue
+            matches.append(employee)
+        matches.sort(key=lambda employee: (employee.name.casefold(), employee.employee_id))
+        return matches[: min(max(limit, 1), 50)]

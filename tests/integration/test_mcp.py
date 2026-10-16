@@ -98,6 +98,27 @@ def test_planner_mcp_is_scoped_and_uses_streamable_http(scoped_client: TestClien
         assert all(row["team"] == "Security" for row in document_payload["documents"])
         assert "embedding" not in documents.text
         assert "chunk_text" not in documents.text
+
+        people = scoped_client.post(
+            "/internal/mcp/people/",
+            headers=headers,
+            json={
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "tools/call",
+                "params": {
+                    "name": "search_employees",
+                    "arguments": {"query": "", "team": "Platform"},
+                },
+            },
+        )
+        people_payload = json.loads(people.json()["result"]["content"][0]["text"])
+        assert people_payload["count"] > 0
+        assert all(row["team"] == "Platform" for row in people_payload["employees"])
+        assert all(
+            "email" in row and "contact_handle" in row
+            for row in people_payload["employees"]
+        )
     finally:
         release_run_context(context_id)
 
@@ -157,5 +178,24 @@ def test_calendar_mcp_lists_recent_meetings_without_transcript_search(
             row["started_at"].startswith("2026-10-14")
             for row in dated_payload["meetings"]
         )
+
+        analysis_response = scoped_client.post(
+            "/internal/mcp/calendar/",
+            headers=headers,
+            json={
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {
+                    "name": "analyze_meeting",
+                    "arguments": {"meeting_id": "M-107"},
+                },
+            },
+        )
+        analysis_payload = json.loads(
+            analysis_response.json()["result"]["content"][0]["text"]
+        )
+        assert analysis_payload["transcript_available"] is True
+        assert analysis_payload["analysis"]["summary"]
     finally:
         release_run_context(context_id)

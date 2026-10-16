@@ -75,16 +75,18 @@ def test_chat_history_is_persistent_and_user_scoped() -> None:
     ).status_code == 404
 
 
-def test_project_stakeholder_question_uses_planning_evidence() -> None:
+def test_project_stakeholder_question_uses_people_evidence() -> None:
     response = client.post(
         "/v1/chat/messages",
         json={"message": "Who are the stakeholders for this project?", "project_id": "payments"},
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["agents_used"] == ["planning", "result"]
-    assert "mihir.saini@lotus.example" in body["evidence"][0]["snippet"]
-    assert body["navigation_targets"][0]["kind"] == "project"
+    assert body["agents_used"] == ["people", "result"]
+    assert any(
+        "mihir.saini@lotus.example" in row["snippet"] for row in body["evidence"]
+    )
+    assert all(row["source_system"] == "employee_directory" for row in body["evidence"])
 
 
 def test_meeting_search_returns_timestamped_transcript_link() -> None:

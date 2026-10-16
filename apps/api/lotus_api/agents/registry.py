@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from typing import Literal
 
 from google import genai
 from google.adk.agents import Agent
@@ -7,21 +7,7 @@ from google.adk.tools import google_search
 from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 
 from ..config import Settings
-from ..models import (
-    AuthContext,
-    ChatRequest,
-    ExecutionPlan,
-    MeetingAnalysis,
-    SpecialistResult,
-)
-from ..storage.base import KnowledgeStore
-
-
-@dataclass(frozen=True)
-class AgentContext:
-    request: ChatRequest
-    auth: AuthContext
-    store: KnowledgeStore
+from ..models import ExecutionPlan, MeetingAnalysis, SpecialistResult
 
 
 def _model(settings: Settings, model_id: str) -> Gemini:
@@ -40,17 +26,19 @@ def build_planner_agent(settings: Settings) -> Agent:
         timeout=settings.agent_timeout_seconds,
         instruction=(
             "You are the Lotus Planner. Select one or more specialists from documents, planning, "
-            "meeting, web, and code. Use documents for internal knowledge, architecture, and "
-            "similar-team work; planning for projects, work items, and stakeholders; meeting "
+            "people, meeting, web, and code. Use documents for internal knowledge, architecture, "
+            "and similar-team work; planning for projects and work items; people for employee "
+            "profiles, contacts, stakeholders, teams, and subject-matter experts; meeting "
             "for calendar, "
             "transcript, decision, action-item, and historical-meeting questions; web only for "
             "public internet research; code for repository implementation questions. For "
             "greetings, "
             "thanks, test messages, help, and questions "
             "about Lotus capabilities, select result as the only step; do not invoke a specialist. "
-            "Independent specialists have no dependencies. Add anomaly after meeting only when "
-            "the request asks for gaps, conflicts, anomalies, action items, or open questions. "
-            "Always add result as the final step depending on every prior step. For relative "
+            "Meeting handles summaries, action items, questions, and anomaly requests itself; "
+            "never add a separate analysis or anomaly agent. Independent specialists have no "
+            "dependencies. Always add result as the final step depending on every prior step. "
+            "For relative "
             "dates—including arbitrary days, months, and relative dates—populate explicit UTC "
             "date_from/date_to bounds. Set artifact_request to "
             "mermaid only when the user explicitly requests an architecture or process diagram."
@@ -133,8 +121,8 @@ def build_planning_agent(settings: Settings, headers: dict[str, str]) -> Agent:
         timeout=settings.agent_timeout_seconds,
         instruction=(
             "Use only the Planner MCP tools and infer the user's planning intent yourself. Use "
-            "get_project for project metadata, get_project_stakeholders for owners and contacts, "
-            "get_planning_item for an explicit issue key, and search_planning_items for counts, "
+            "get_project for project metadata, get_planning_item for an explicit issue key, and "
+            "search_planning_items for counts, "
             "lists, text queries, status, team, assignee, or priority filters. Planning queries "
             "are structured database lookups and never vector searches. Return a SpecialistResult "
             "with agent='planning' and structured project or planning-item navigation. Do not "
@@ -146,7 +134,47 @@ def build_planning_agent(settings: Settings, headers: dict[str, str]) -> Agent:
     )
 
 
-def build_meeting_agent(settings: Settings, headers: dict[str, str]) -> Agent:
+def build_people_agent(settings: Settings, headers: dict[str, str]) -> Agent:
+    return Agent(
+        name="people_agent",
+        model=_model(settings, settings.generation_model),
+        timeout=settings.agent_timeout_seconds,
+        instruction=(
+            "Use only the Employee Directory MCP tools. Use get_employee for an explicit person, "
+            "search_employees for name, team, designation, timezone, or directory queries, "
+            "get_employee_project_stakeholders for project contacts, and "
+            "find_subject_matter_experts for expertise requests. Expertise is a structured-data "
+            "match, not a guarantee; preserve the returned basis. Return a SpecialistResult with "
+            "agent='people' and employee_directory evidence. Do not compose the final answer."
+        ),
+        tools=[_mcp_toolset(settings, "/internal/mcp/people", headers)],
+        output_schema=SpecialistResult,
+        output_key="people_result",
+    )
+
+
+def build_meeting_agent(
+    settings: Settings,
+    headers: dict[str, str] | None = None,
+    task: Literal["retrieve", "summarize"] = "retrieve",
+) -> Agent:
+    if task == "summarize":
+        return Agent(
+            name="meeting_agent",
+            model=_model(settings, settings.generation_model),
+            timeout=settings.agent_timeout_seconds,
+            instruction=(
+                "Analyze only the supplied timestamped transcript. Produce a concise summary, "
+                "decisions, action items, and unresolved questions. Every decision and action "
+                "must cite valid segment IDs and timestamps from the input. Do not infer owners "
+                "or dates. Leave anomalies and clarifications empty because deterministic tools "
+                "run after extraction."
+            ),
+            output_schema=MeetingAnalysis,
+            output_key="meeting_analysis",
+        )
+    if headers is None:
+        raise ValueError("Meeting retrieval requires scoped MCP headers")
     return Agent(
         name="meeting_agent",
         model=_model(settings, settings.generation_model),
@@ -160,93 +188,14 @@ def build_meeting_agent(settings: Settings, headers: dict[str, str]) -> Agent:
             "discussion inside transcripts. Never use transcript embeddings merely to count or "
             "list calendar meetings. A get_meeting response with transcript_available=false is "
             "calendar metadata only; do not present its title or description as transcript "
-            "content. "
+            "content. Use analyze_meeting when the user asks for a summary, decisions, action "
+            "items, open questions, clarifications, conflicts, or anomalies. "
             "Return a SpecialistResult with agent='meeting'. Use "
             "retrieval_method='calendar_lookup' for calendar/get_meeting records and preserve "
-            "meeting navigation targets. Do not compose the final answer."
+            "meeting navigation targets. Preserve returned structured analysis as a "
+            "meeting_analysis artifact. Do not compose the final answer."
         ),
         tools=[_mcp_toolset(settings, "/internal/mcp/calendar", headers)],
         output_schema=SpecialistResult,
         output_key="meeting_result",
-    )
-
-
-def build_meeting_analysis_agent(settings: Settings) -> Agent:
-    return Agent(
-        name="meeting_analysis_agent",
-        model=_model(settings, settings.generation_model),
-        timeout=settings.agent_timeout_seconds,
-        instruction=(
-            "Analyze only the supplied timestamped transcript. Produce a concise summary, "
-            "decisions, action items, and unresolved questions. Every decision must cite valid "
-            "segment IDs and timestamps from the input. Do not infer owners or dates. Leave "
-            "anomalies empty because deterministic policy checks run after extraction."
-        ),
-        output_schema=MeetingAnalysis,
-        output_key="meeting_analysis",
-    )
-
-
-def build_agent_tree(settings: Settings, context: AgentContext) -> Agent:
-    """Build the ADK agent graph. Authorization stays in captured server context."""
-
-    def search_company_documents(query: str) -> dict:
-        """Search authorized enterprise document chunks."""
-        rows = context.store.search_documents(query, context.auth, context.request.project_id)
-        return {"evidence": [row.model_dump(mode="json") for row in rows]}
-
-    def search_meeting_transcripts(query: str) -> dict:
-        """Search authorized timestamped meeting transcript chunks."""
-        rows = context.store.search_transcripts(
-            query,
-            context.auth,
-            context.request.project_id,
-            meeting_id=context.request.meeting_id,
-        )
-        return {"evidence": [row.model_dump(mode="json") for row in rows]}
-
-    generation_model = _model(settings, settings.generation_model)
-    router_model = _model(settings, settings.router_model)
-    documents = Agent(
-        name="documents_agent",
-        model=generation_model,
-        timeout=settings.agent_timeout_seconds,
-        instruction="Search company sources using only the supplied tool and return evidence.",
-        tools=[search_company_documents],
-    )
-    meeting = Agent(
-        name="meeting_agent",
-        model=generation_model,
-        timeout=settings.agent_timeout_seconds,
-        instruction="Search transcript evidence, preserving meeting IDs and timestamps.",
-        tools=[search_meeting_transcripts],
-    )
-    anomaly = Agent(
-        name="anomaly_agent",
-        model=generation_model,
-        timeout=settings.agent_timeout_seconds,
-        instruction="Review meeting evidence for explicit gaps and contradictions only.",
-    )
-    web = Agent(
-        name="web_search_agent",
-        model=generation_model,
-        timeout=settings.agent_timeout_seconds,
-        instruction="Use Google Search for public-web evidence and cite sources.",
-        tools=[google_search],
-    )
-    result = Agent(
-        name="result_agent",
-        model=generation_model,
-        timeout=settings.agent_timeout_seconds,
-        instruction="Compose the final answer exclusively from normalized evidence and artifacts.",
-    )
-    return Agent(
-        name="lotus_planner",
-        model=router_model,
-        timeout=settings.agent_timeout_seconds,
-        instruction=(
-            "Create a plan, then transfer among the necessary specialists. Never ask the user "
-            "to choose a mode. Always transfer to result_agent last."
-        ),
-        sub_agents=[documents, meeting, anomaly, web, result],
     )
