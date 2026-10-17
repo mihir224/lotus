@@ -32,12 +32,11 @@ grants the runtime identity only Cloud SQL client and secret access.
 
 `infra/deploy-cloud-run-demo.sh` builds one git-SHA-tagged image and uses it for migration, seed,
 and service deployment. It deploys a no-traffic candidate, checks health and PostgreSQL readiness,
-then sends 100% of traffic to that candidate. Export the public OAuth client ID and allowlist before
-running it; never export or handle the database password manually.
+then sends 100% of traffic to that candidate. Export the public OAuth client ID before running it;
+never export or handle the database password manually.
 
 ```bash
 export GOOGLE_OAUTH_CLIENT_ID="your-client-id.apps.googleusercontent.com"
-export ALLOWED_GOOGLE_EMAILS="alice@example.com,bob@example.com"
 ./infra/deploy-cloud-run-demo.sh
 ```
 
@@ -64,7 +63,7 @@ gcloud secrets delete lotus-db-password
 ## Security invariants
 
 The service is public only so browsers can load the login page. Protected APIs verify Google ID
-tokens and enforce the configured allowlist. Cloud SQL has a public IP for the managed connector,
+tokens and require a verified Google account. Cloud SQL has a public IP for the managed connector,
 but no authorized client networks; Cloud Run connects through its `/cloudsql/<instance>` Unix
 socket. Never commit `.env`, OAuth secrets, database passwords, ADC files, or service-account keys.
 Never log a resolved database URL, SQL parameters, prompts, transcript text, bearer tokens, or

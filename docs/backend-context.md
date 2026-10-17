@@ -90,8 +90,9 @@ authorization headers, system prompts, full transcripts, vectors, and unrestrict
 ## Authentication and abuse control
 
 `AUTH_MODE=dev` trusts local `X-Lotus-*` headers. `AUTH_MODE=google` requires a server-verified
-Google ID token and a non-empty email/domain allowlist. Do not weaken the allowlist or accept a
-decoded-but-unverified browser token. Google users receive the existing `group:demo` fixture ACL.
+Google ID token with a verified email. The demo intentionally accepts any verified Google account;
+do not accept a decoded-but-unverified browser token. Google users receive the existing
+`group:demo` fixture ACL.
 
 Only health, readiness, and auth configuration are public. `/v1/auth/me` and all data routes require
 authentication in Google mode. Chat is limited per authenticated user by `rate_limit.py`; this

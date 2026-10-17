@@ -149,7 +149,7 @@ export function GoogleLogin({ clientId, onAuthenticated }: GoogleLoginProps) {
         <LotusLogo />
         <p className="eyebrow">Protected enterprise workspace</p>
         <h1>Sign in to Lotus</h1>
-        <p>Use an approved Google account to access agents, meetings, and company knowledge.</p>
+        <p>Use your Google account to access agents, meetings, and company knowledge.</p>
         <div className="google-signin" ref={button} />
         {error && <div className="error">{error}</div>}
       </section>
