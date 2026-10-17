@@ -1,8 +1,8 @@
 import type { CalendarEvent, MeetingRecord } from "../../types";
-import { authHeaders } from "../../auth";
+import { authenticatedFetch, authHeaders } from "../../auth";
 
-export const DEMO_RECORDING_SRC =
-  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
+/** Bundled clip for all fixture meeting recordings (apps/web/public). */
+export const DEMO_RECORDING_SRC = "/team_discussion.mp4";
 
 export function resolveRecordingUrl(recordingUrl: string | null | undefined) {
   if (!recordingUrl || recordingUrl.startsWith("fixture://")) return DEMO_RECORDING_SRC;
@@ -15,13 +15,13 @@ export async function fetchCalendarEvents(dateFrom: string, dateTo: string) {
     date_from: dateFrom,
     date_to: dateTo
   });
-  const response = await fetch(`/v1/calendar/events?${params}`, { headers: authHeaders() });
+  const response = await authenticatedFetch(`/v1/calendar/events?${params}`, { headers: authHeaders() });
   if (!response.ok) throw new Error(`Calendar request failed with ${response.status}`);
   return (await response.json()) as CalendarEvent[];
 }
 
 export async function fetchMeetingRecord(meetingId: string) {
-  const response = await fetch(`/v1/meetings/${meetingId}`, { headers: authHeaders() });
+  const response = await authenticatedFetch(`/v1/meetings/${meetingId}`, { headers: authHeaders() });
   if (!response.ok) throw new Error(`Meeting request failed with ${response.status}`);
   return (await response.json()) as MeetingRecord;
 }
@@ -38,7 +38,7 @@ export type CreateCalendarEventPayload = {
 };
 
 export async function createCalendarEvent(payload: CreateCalendarEventPayload) {
-  const response = await fetch("/v1/calendar/events", {
+  const response = await authenticatedFetch("/v1/calendar/events", {
     method: "POST",
     headers: authHeaders(true),
     body: JSON.stringify(payload)
@@ -51,7 +51,7 @@ export async function createCalendarEvent(payload: CreateCalendarEventPayload) {
 }
 
 export async function summarizeMeeting(meetingId: string) {
-  const response = await fetch(`/v1/meetings/${meetingId}/summarize`, {
+  const response = await authenticatedFetch(`/v1/meetings/${meetingId}/summarize`, {
     method: "POST",
     headers: authHeaders()
   });

@@ -176,6 +176,28 @@ def test_calendar_events_fixture_week() -> None:
     assert all(row["event_id"].startswith("cal-") for row in events)
 
 
+def test_calendar_events_cover_october_november_and_december() -> None:
+    response = client.get(
+        "/v1/calendar/events",
+        params={
+            "project_id": "payments",
+            "date_from": "2026-10-01T00:00:00+05:30",
+            "date_to": "2027-01-01T00:00:00+05:30",
+        },
+    )
+    assert response.status_code == 200
+    events = response.json()
+    months = {row["started_at"][:7] for row in events}
+    assert months == {"2026-10", "2026-11", "2026-12"}
+    fixture_ids = {f"cal-{number}" for number in range(107, 151)}
+    assert fixture_ids <= {row["event_id"] for row in events}
+    assert all(row["meeting_id"] for row in events)
+
+    december = [row for row in events if row["started_at"].startswith("2026-12")]
+    assert len(december) == 11
+    assert december[-1]["meeting_id"] == "M-150"
+
+
 def test_work_board_lists_and_updates_issue() -> None:
     board = client.get("/v1/work-board", params={"project_id": "payments", "team_id": "platform"})
     assert board.status_code == 200

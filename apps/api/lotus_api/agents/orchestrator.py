@@ -1009,7 +1009,18 @@ class OrchestrationService:
                 if key not in seen:
                     evidence.append(row)
                     seen.add(key)
-        evidence = evidence[: self.settings.max_evidence_items]
+        structured_calendar_listing = bool(evidence) and all(
+            row.source_system == "calendar"
+            and row.retrieval_method == "calendar_lookup"
+            and row.score is None
+            for row in evidence
+        )
+        evidence_limit = (
+            max(self.settings.max_evidence_items, 20)
+            if structured_calendar_listing
+            else self.settings.max_evidence_items
+        )
+        evidence = evidence[:evidence_limit]
         if plan.artifact_request == "mermaid" and not any(
             artifact.artifact_type == "mermaid" for artifact in artifacts
         ):

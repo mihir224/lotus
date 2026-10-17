@@ -14,8 +14,8 @@ def test_seed_is_idempotent_and_enforces_tenant_scope() -> None:
     second = store.seed()
     assert first == second == {
         "documents": 90,
-        "meetings": 13,
-        "calendar_events": 10,
+        "meetings": 47,
+        "calendar_events": 44,
         "board_issues": 30,
         "employees": 6,
         "projects": 3,

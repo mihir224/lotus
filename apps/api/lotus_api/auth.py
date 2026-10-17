@@ -8,7 +8,7 @@ from .config import Settings, get_settings
 from .models import AuthContext
 
 
-def _google_auth_context(claims: dict[str, Any], settings: Settings) -> AuthContext:
+def _google_auth_context(claims: dict[str, Any]) -> AuthContext:
     subject = str(claims.get("sub", "")).strip()
     email = str(claims.get("email", "")).strip().casefold()
     name = str(claims.get("name", "")).strip() or None
@@ -17,13 +17,6 @@ def _google_auth_context(claims: dict[str, Any], settings: Settings) -> AuthCont
         raise HTTPException(status_code=401, detail="Google account email is not verified")
 
     email_domain = email.rsplit("@", 1)[-1] if "@" in email else ""
-    allowed_emails = settings.google_email_allowlist
-    allowed_domains = settings.google_domain_allowlist
-    if not allowed_emails and not allowed_domains:
-        raise HTTPException(status_code=503, detail="Google account allowlist is not configured")
-    if email not in allowed_emails and email_domain not in allowed_domains:
-        raise HTTPException(status_code=403, detail="Google account is not allowed")
-
     return AuthContext(
         tenant_id="demo",
         user_id=subject,
@@ -69,7 +62,7 @@ def get_auth_context(
                 detail="Google ID token is invalid or expired",
                 headers={"WWW-Authenticate": "Bearer"},
             ) from error
-        return _google_auth_context(claims, settings)
+        return _google_auth_context(claims)
 
     if settings.auth_mode != "dev":
         raise HTTPException(status_code=503, detail="Unsupported authentication mode")

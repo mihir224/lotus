@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { authHeaders, type AuthConfig, type AuthSession, GoogleLogin, signOut, storedAuthSession } from "./auth";
+import { AUTH_EXPIRED_EVENT, authHeaders, type AuthConfig, type AuthSession, GoogleLogin, signOut, storedAuthSession } from "./auth";
 import { createChatSession, deleteChatSession, getChatSession, listChatSessions } from "./chatHistory";
 import { streamChat } from "./chatStream";
 import { CalendarView } from "./components/calendar/CalendarView";
@@ -70,6 +70,28 @@ export function App() {
   const [theme, setTheme] = useState<Theme>(() => localStorage.getItem("lotus.theme") === "light" ? "light" : "dark");
   const [profileOpen, setProfileOpen] = useState(false);
   const { profile } = useUserProfile(session, authConfig?.mode ?? "dev");
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      controllerRef.current?.abort();
+      setSession(null);
+      setActiveSection("agent");
+      setChatSessionId(null);
+      setMessages([]);
+      setAnswer(null);
+      setStreamedAnswer("");
+      setRunEvents([]);
+      runEventsRef.current = [];
+      sessionStorage.removeItem("lotus.latest_run");
+      setLoading(false);
+      setError(null);
+      setHistoryOpen(false);
+      setProfileOpen(false);
+      window.history.replaceState({}, "", agentLocation());
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+  }, []);
 
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("lotus.theme", theme); }, [theme]);
   useEffect(() => { localStorage.setItem("lotus.debug", String(debugEnabled)); if (!debugEnabled) { setRunEvents([]); runEventsRef.current = []; sessionStorage.removeItem("lotus.latest_run"); } }, [debugEnabled]);

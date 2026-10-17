@@ -1,4 +1,5 @@
 import type { RunEvent } from "./types";
+import { authenticatedFetch } from "./auth";
 
 export function parseSseFrames(buffer: string): { events: RunEvent[]; remainder: string } {
   const normalized = buffer.replace(/\r\n/g, "\n");
@@ -27,14 +28,13 @@ export async function streamChat(
   onEvent: (event: RunEvent) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const response = await fetch("/v1/chat/stream", {
+  const response = await authenticatedFetch("/v1/chat/stream", {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
     signal
   });
   if (!response.ok) {
-    if (response.status === 401) throw new Error("Your session expired. Sign in again.");
     if (response.status === 429) throw new Error("Request limit reached. Please try again shortly.");
     throw new Error(`Lotus request failed (${response.status}).`);
   }

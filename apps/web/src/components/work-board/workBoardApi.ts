@@ -1,4 +1,4 @@
-import { authHeaders } from "../../auth";
+import { authenticatedFetch, authHeaders } from "../../auth";
 
 export type BoardIssueStatus =
   | "ready_to_start"
@@ -87,7 +87,7 @@ export async function fetchWorkBoard(
   teamId: string
 ): Promise<WorkBoardPayload> {
   const params = new URLSearchParams({ project_id: projectId, team_id: teamId });
-  const response = await fetch(`/v1/work-board?${params}`, { headers: authHeaders() });
+  const response = await authenticatedFetch(`/v1/work-board?${params}`, { headers: authHeaders() });
   if (!response.ok) throw new Error(`Work board failed with ${response.status}`);
   return response.json() as Promise<WorkBoardPayload>;
 }
@@ -96,7 +96,7 @@ export async function patchBoardIssue(
   issueKey: string,
   patch: BoardIssuePatch
 ): Promise<BoardIssue> {
-  const response = await fetch(`/v1/work-board/issues/${encodeURIComponent(issueKey)}`, {
+  const response = await authenticatedFetch(`/v1/work-board/issues/${encodeURIComponent(issueKey)}`, {
     method: "PATCH",
     headers: authHeaders(true),
     body: JSON.stringify(patch)
@@ -106,7 +106,7 @@ export async function patchBoardIssue(
 }
 
 export async function createBoardIssue(payload: BoardIssueCreatePayload): Promise<BoardIssue> {
-  const response = await fetch("/v1/work-board/issues", {
+  const response = await authenticatedFetch("/v1/work-board/issues", {
     method: "POST",
     headers: authHeaders(true),
     body: JSON.stringify(payload)

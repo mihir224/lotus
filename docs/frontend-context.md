@@ -54,8 +54,8 @@ the workspace. The credential is stored in `sessionStorage` and attached as a Be
 `authHeaders()`.
 
 The client ID is public and comes from the backend. NEVER add an OAuth client secret to frontend
-code, Vite variables, HTML, or Git. Backend verification and allowlisting are the security boundary;
-frontend state is not authorization.
+code, Vite variables, HTML, or Git. Server-side Google token and verified-email validation are the
+security boundary; frontend state is not authorization.
 
 ## API/error behavior
 

@@ -36,8 +36,6 @@ class Settings(BaseSettings):
     web_agent_timeout_seconds: float = 180.0
     auth_mode: str = "dev"
     google_oauth_client_id: str | None = None
-    allowed_google_emails: str = ""
-    allowed_google_domains: str = ""
     agent_rate_limit_requests: int = 10
     agent_rate_limit_window_seconds: int = 300
     telemetry_enabled: bool = False
@@ -47,22 +45,6 @@ class Settings(BaseSettings):
     @property
     def internal_mcp_base_url(self) -> str:
         return self.mcp_base_url or f"http://127.0.0.1:{os.getenv('PORT', '8000')}"
-
-    @property
-    def google_email_allowlist(self) -> set[str]:
-        return {
-            value.strip().casefold()
-            for value in self.allowed_google_emails.split(",")
-            if value.strip()
-        }
-
-    @property
-    def google_domain_allowlist(self) -> set[str]:
-        return {
-            value.strip().casefold().removeprefix("@")
-            for value in self.allowed_google_domains.split(",")
-            if value.strip()
-        }
 
     @property
     def active_embedding_model(self) -> str:
