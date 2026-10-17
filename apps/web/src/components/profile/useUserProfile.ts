@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { authHeaders, type AuthSession } from "../../auth";
+import { authenticatedFetch, authHeaders, type AuthSession } from "../../auth";
 import { profileDesignation, type UserProfile } from "./profileUtils";
 
 export function useUserProfile(session: AuthSession | null, authMode: "dev" | "google") {
@@ -9,7 +9,7 @@ export function useUserProfile(session: AuthSession | null, authMode: "dev" | "g
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void fetch("/v1/auth/me", { headers: authHeaders() })
+    void authenticatedFetch("/v1/auth/me", { headers: authHeaders() })
       .then(async (response) => {
         if (!response.ok) throw new Error(String(response.status));
         return response.json() as Promise<UserProfile>;

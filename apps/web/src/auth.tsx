@@ -40,6 +40,14 @@ declare global {
 
 const TOKEN_KEY = "lotus.google.credential";
 const USER_KEY = "lotus.google.user";
+export const AUTH_EXPIRED_EVENT = "lotus:auth-expired";
+
+export class AuthExpiredError extends Error {
+  constructor() {
+    super("Your session expired. Sign in again.");
+    this.name = "AuthExpiredError";
+  }
+}
 
 export function storedAuthSession(): AuthSession | null {
   const credential = sessionStorage.getItem(TOKEN_KEY);
@@ -67,6 +75,18 @@ export function authHeaders(includeJson = false): Record<string, string> {
 export function clearAuthSession() {
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
+}
+
+export async function authenticatedFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<Response> {
+  const response = await fetch(input, init);
+  if (response.status !== 401) return response;
+
+  clearAuthSession();
+  window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  throw new AuthExpiredError();
 }
 
 async function verifyCredential(credential: string): Promise<AuthSession> {

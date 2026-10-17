@@ -1,4 +1,4 @@
-import { authHeaders } from "../../auth";
+import { authenticatedFetch, authHeaders } from "../../auth";
 
 export type DocSourceSummary = {
   source_id: string;
@@ -53,14 +53,14 @@ const PROJECT_ID = "payments";
 
 export async function fetchDocsCatalog(): Promise<DocCatalog> {
   const params = new URLSearchParams({ project_id: PROJECT_ID });
-  const response = await fetch(`/v1/docs/catalog?${params}`, { headers: authHeaders() });
+  const response = await authenticatedFetch(`/v1/docs/catalog?${params}`, { headers: authHeaders() });
   if (!response.ok) throw new Error(`Docs catalog failed with ${response.status}`);
   return response.json() as Promise<DocCatalog>;
 }
 
 export async function fetchDocPage(sourceId: string): Promise<DocPage> {
   const params = new URLSearchParams({ project_id: PROJECT_ID });
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `/v1/docs/sources/${encodeURIComponent(sourceId)}?${params}`,
     { headers: authHeaders() }
   );
@@ -70,13 +70,13 @@ export async function fetchDocPage(sourceId: string): Promise<DocPage> {
 
 export async function searchDocs(query: string): Promise<DocSearchHit[]> {
   const params = new URLSearchParams({ project_id: PROJECT_ID, q: query });
-  const response = await fetch(`/v1/docs/search?${params}`, { headers: authHeaders() });
+  const response = await authenticatedFetch(`/v1/docs/search?${params}`, { headers: authHeaders() });
   if (!response.ok) throw new Error(`Doc search failed with ${response.status}`);
   return response.json() as Promise<DocSearchHit[]>;
 }
 
 export async function createDoc(payload: DocCreatePayload): Promise<DocPage> {
-  const response = await fetch("/v1/docs/sources", {
+  const response = await authenticatedFetch("/v1/docs/sources", {
     method: "POST",
     headers: authHeaders(true),
     body: JSON.stringify({ ...payload, project_id: PROJECT_ID })
@@ -99,7 +99,7 @@ export async function updateDoc(
   payload: DocUpdatePayload
 ): Promise<DocPage> {
   const params = new URLSearchParams({ project_id: PROJECT_ID });
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `/v1/docs/sources/${encodeURIComponent(sourceId)}?${params}`,
     {
       method: "PUT",
@@ -113,7 +113,7 @@ export async function updateDoc(
 
 export async function deleteDoc(sourceId: string): Promise<void> {
   const params = new URLSearchParams({ project_id: PROJECT_ID });
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `/v1/docs/sources/${encodeURIComponent(sourceId)}?${params}`,
     { method: "DELETE", headers: authHeaders() }
   );

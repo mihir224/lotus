@@ -13,7 +13,9 @@ from lotus_api.models import (
     AuthContext,
     ChatRequest,
     Evidence,
+    ExecutionPlan,
     NavigationTarget,
+    PlanStep,
     Route,
     Scope,
     SpecialistResult,
@@ -112,6 +114,51 @@ def test_fixture_planner_resolves_arbitrary_calendar_days() -> None:
     )
     assert reversed_date.date_from == datetime(2025, 2, 14, tzinfo=UTC)
     assert reversed_date.date_to == datetime(2025, 2, 15, tzinfo=UTC)
+
+
+def test_result_preserves_structured_calendar_listing_beyond_vector_limit() -> None:
+    settings = Settings(runtime_mode="fixture", store_backend="memory", max_evidence_items=8)
+    store = MemoryKnowledgeStore(settings, DeterministicEmbedder())
+    service = OrchestrationService(settings, store)
+    auth = AuthContext(
+        tenant_id="demo", user_id="alice", principals=("user:alice", "group:demo")
+    )
+    plan = ExecutionPlan(
+        steps=[
+            PlanStep(agent=AgentName.MEETING, intent="List November meetings"),
+            PlanStep(
+                agent=AgentName.RESULT,
+                intent="Return the count",
+                depends_on=[AgentName.MEETING],
+            ),
+        ],
+        reason="Calendar listing",
+    )
+    evidence = [
+        Evidence(
+            source_id=f"M-{index}",
+            source_system="calendar",
+            source_type="meeting",
+            title=f"Meeting {index}",
+            snippet=f"Meeting {index} details",
+            retrieval_method="calendar_lookup",
+            scope=Scope(
+                tenant_id="demo", project_id="payments", meeting_id=f"M-{index}"
+            ),
+            meeting_id=f"M-{index}",
+        )
+        for index in range(13)
+    ]
+
+    grounded = service._run_result(
+        request("How many meetings did I have in November 2026?"),
+        auth,
+        plan,
+        [SpecialistResult(agent=AgentName.MEETING, evidence=evidence)],
+        "calendar-count",
+    )
+
+    assert len(grounded.evidence) == 13
 
 
 def test_meeting_analysis_artifact_is_hydrated_from_store() -> None:
